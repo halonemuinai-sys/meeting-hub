@@ -38,6 +38,7 @@ async function seedConfidentialDummy() {
       endTime: createWibDate(y, m, d, 15, 30),
       status: 'CONFIRMED',
       isConfidential: true,
+      category: 'Quarterly Meeting',
       specialRequests: 'Secure soundproof door locked, Polycom conference ready with external London advisor'
     },
     {
@@ -53,6 +54,7 @@ async function seedConfidentialDummy() {
       endTime: createWibDate(y, m, d, 16, 30),
       status: 'CONFIRMED',
       isConfidential: true,
+      category: 'Interview',
       specialRequests: 'Private coffee service prior to session start, no interruptions please'
     },
     {
@@ -68,6 +70,7 @@ async function seedConfidentialDummy() {
       endTime: createWibDate(y, m, d, 16, 0),
       status: 'CONFIRMED',
       isConfidential: true,
+      category: 'Monthly Meeting',
       specialRequests: 'High-security escort, specialized jewelry display lighting & white glove inspection kits'
     },
     {
@@ -83,6 +86,7 @@ async function seedConfidentialDummy() {
       endTime: createWibDate(y, m, d, 13, 0),
       status: 'CONFIRMED',
       isConfidential: true,
+      category: 'Weekly Meeting',
       specialRequests: 'Studio soundproof barrier activated, NDA documents prepared on table'
     },
     {
@@ -98,7 +102,57 @@ async function seedConfidentialDummy() {
       endTime: createWibDate(y, m, d + 1, 12, 0),
       status: 'CONFIRMED',
       isConfidential: true,
+      category: 'Quarterly Meeting',
       specialRequests: 'Dual screen projector connected, encrypted wireless network required'
+    },
+    // Non-confidential public meetings
+    {
+      roomName: 'Ruang Meeting A',
+      title: 'Holding All-Hands Townhall & Q4 Strategy Kickoff',
+      description: 'Quarterly alignment on group strategy, omnichannel expansion, and cross-divisional updates with all department heads.',
+      organizerName: 'Aris Setiyono',
+      organizerEmail: 'aris@mra.co.id',
+      department: 'IT & Shared Services',
+      attendees: JSON.stringify(['bambang@mra.co.id', 'hendra@mra.co.id']),
+      attendeesCount: 16,
+      startTime: createWibDate(y, m, d, 9, 0),
+      endTime: createWibDate(y, m, d, 11, 0),
+      status: 'CONFIRMED',
+      isConfidential: false,
+      category: 'Townhall / All-Hands',
+      specialRequests: 'Stage microphone setup & dual projector active'
+    },
+    {
+      roomName: 'R. Meeting Diamond',
+      title: 'Weekly Media Content Production Sync & Podcast Recording',
+      description: 'Review script lineups, audio production timelines, and sponsorship banners for upcoming lifestyle episodes.',
+      organizerName: 'Reza Rahardian',
+      organizerEmail: 'reza@mramedia.co.id',
+      department: 'Creative & Editorial',
+      attendees: JSON.stringify(['maya@mramedia.co.id', 'aditya@mramedia.co.id']),
+      attendeesCount: 8,
+      startTime: createWibDate(y, m, d, 14, 0),
+      endTime: createWibDate(y, m, d, 16, 0),
+      status: 'CONFIRMED',
+      isConfidential: false,
+      category: 'Weekly Meeting',
+      specialRequests: 'Studio condenser microphones checked and calibrated'
+    },
+    {
+      roomName: 'Ruang Meeting B',
+      title: 'Interview Final UI/UX Designer Candidate',
+      description: 'Portfolio review, interactive prototype walk-through, and team culture interview with HR and Lead Designer.',
+      organizerName: 'Dina Lestari',
+      organizerEmail: 'dina.hr@mra.co.id',
+      department: 'Human Resources (HR HUB)',
+      attendees: JSON.stringify(['aris@mra.co.id', 'dina.hr@mra.co.id']),
+      attendeesCount: 4,
+      startTime: createWibDate(y, m, d, 10, 0),
+      endTime: createWibDate(y, m, d, 11, 30),
+      status: 'CONFIRMED',
+      isConfidential: false,
+      category: 'Interview',
+      specialRequests: 'Whiteboard markers ready'
     }
   ];
 
@@ -126,15 +180,16 @@ async function seedConfidentialDummy() {
         endTime: m.endTime,
         status: m.status,
         isConfidential: m.isConfidential,
+        category: m.category || 'General Meeting',
         specialRequests: m.specialRequests,
         calendarUid
       }
     });
 
-    console.log(`✅ Seeded Confidential Booking: "${created.title}" at ${m.roomName} (${m.organizerName})`);
+    console.log(`✅ Seeded Booking: "${created.title}" [${created.category}] (${created.isConfidential ? 'CONFIDENTIAL' : 'PUBLIC'}) at ${m.roomName}`);
   }
 
-  console.log('\n🎉 Finished seeding 5 realistic confidential meetings!');
+  console.log('\n🎉 Finished seeding realistic meetings!');
   process.exit(0);
 }
 
