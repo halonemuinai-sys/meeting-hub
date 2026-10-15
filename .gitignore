@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+*/node_modules/
+package-lock.json.bak
+
+# Next.js build output
+.next/
+frontend/.next/
+out/
+build/
+dist/
+
+# Environment files - NEVER commit real credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+backend/.env
+frontend/.env
+!backend/.env.example
+
+# Temporary / Mail Outbox / Logs
+backend/mail-outbox/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Prisma Generated Client Cache (if any custom output)
+# Note: standard @prisma/client is inside node_modules, but if local query engine files exist:
+*.dll.node
+*.dylib.node
+*.so.node

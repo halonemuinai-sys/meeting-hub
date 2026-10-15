@@ -1,0 +1,121 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["mra_meeting_room"]
+}
+
+model Company {
+  id        String     @id @default(uuid())
+  code      String     @unique
+  name      String
+  rooms     Room[]
+  attendees Attendee[]
+  users     User[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@schema("mra_meeting_room")
+}
+
+model Room {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String
+  floor           String?
+  capacityMin     Int       @default(1)
+  capacityMax     Int
+  amenities       String?   // JSON array string of tags
+  colorCode       String    @default("#2563eb")
+  isActive        Boolean   @default(true)
+  isMaintenance   Boolean   @default(false)
+  maintenanceNote String?
+  bookings        Booking[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+  @@schema("mra_meeting_room")
+}
+
+model Booking {
+  id              String   @id @default(uuid())
+  roomId          String
+  room            Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  organizerName   String
+  organizerEmail  String
+  department      String
+  attendees       String?  // JSON string array of attendee emails
+  attendeesCount  Int      @default(1)
+  startTime       DateTime
+  endTime         DateTime
+  status          String   @default("CONFIRMED") // CONFIRMED, CANCELLED, COMPLETED
+  cancelReason    String?
+  specialRequests String?
+  calendarUid     String?
+  isConfidential  Boolean  @default(false)
+  category        String?  @default("General Meeting")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([roomId, startTime, endTime])
+  @@index([status])
+  @@schema("mra_meeting_room")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String   @default("$2a$10$wTqKxM8v6aU9PqD7U8m4seJ3eB1vP7P6hB6A.sA.4rR5fT7U8M9Ke") // default hash
+  name       String
+  role       String   @default("USER") // SUPER_ADMIN, GA_ADMIN, USER
+  companyId  String?
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  department String?
+  isActive   Boolean  @default(true)
+  lastLogin  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@schema("mra_meeting_room")
+}
+
+model Amenity {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String?
+  category    String   @default("GENERAL") // VISUAL_DISPLAY, AUDIO_CONFERENCE, CONNECTIVITY, ROOM_COMFORT, OTHERS
+  description String?
+  icon        String?  // Lucide icon name, e.g. "Tv", "Mic", "Wifi", "Wind", "Projector"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@schema("mra_meeting_room")
+}
+
+model Attendee {
+  id         String   @id @default(uuid())
+  fullName   String
+  email      String   @unique
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department String
+  jobTitle   String?
+  phone      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([department])
+  @@schema("mra_meeting_room")
+}
