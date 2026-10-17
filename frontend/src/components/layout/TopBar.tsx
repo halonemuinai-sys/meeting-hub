@@ -20,10 +20,10 @@ export default function TopBar({
   onToggleSidebar,
   onOpenMobile
 }: TopBarProps) {
-  const { user, logout } = useAuth();
+  const { user, requestLogout } = useAuth();
 
   const handleLogout = () => {
-    if (confirm('Sign out of MRA Meeting Hub?')) logout();
+    requestLogout();
   };
 
   return (

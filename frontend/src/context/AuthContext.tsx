@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import LogoutModal from '@/components/modals/LogoutModal';
 
 export interface AuthUser {
   id: string;
@@ -21,6 +22,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
+  requestLogout: () => void;
   switchUser: (email: string) => Promise<boolean>;
 }
 
@@ -80,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
   const logout = async () => {
     try {
       await api.logout().catch(() => {});
@@ -90,6 +94,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const requestLogout = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    await logout();
+  };
+
   // Quick switch user for demo & testing convenience
   const switchUser = async (email: string) => {
     const res = await login(email, 'Admin@123');
@@ -97,8 +109,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, switchUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, requestLogout, switchUser }}>
       {children}
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleConfirmLogout}
+        user={user}
+      />
     </AuthContext.Provider>
   );
 }

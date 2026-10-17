@@ -61,7 +61,7 @@ export default function Sidebar({
   mobileOpen,
   onCloseMobile
 }: SidebarProps) {
-  const { user, logout } = useAuth();
+  const { user, requestLogout } = useAuth();
 
   // Close the mobile drawer with Escape and when the viewport grows to desktop size
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function Sidebar({
   }, [mobileOpen, onCloseMobile]);
 
   const handleLogout = () => {
-    if (confirm('Sign out of MRA Meeting Hub?')) logout();
+    requestLogout();
   };
 
   const renderSidebar = (mobile = false) => (
