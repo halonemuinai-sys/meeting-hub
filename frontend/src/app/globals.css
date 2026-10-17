@@ -35,6 +35,44 @@ body {
   background: #94a3b8;
 }
 
+/* Date picker (react-day-picker) theme */
+.mra-day-picker {
+  --rdp-accent-color: #2563eb;
+  --rdp-accent-background-color: #eff6ff;
+  --rdp-today-color: #2563eb;
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-day_button-border-radius: 8px;
+  --rdp-selected-border: 0;
+  --rdp-nav-height: 2.25rem;
+  --rdp-animation_duration: 0.25s;
+  font-size: 0.8125rem;
+  color: #334155;
+}
+.mra-day-picker .rdp-month_caption {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.mra-day-picker .rdp-weekday {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.mra-day-picker .rdp-day_button:hover:not([disabled]) {
+  background: #f1f5f9;
+}
+.mra-day-picker .rdp-selected .rdp-day_button {
+  background: var(--rdp-accent-color);
+  color: #fff;
+  font-weight: 700;
+}
+.mra-day-picker .rdp-chevron {
+  fill: #64748b;
+}
+
 /* Pulsing dot */
 @keyframes pulseDot {
   0%, 100% { opacity: 1; transform: scale(1); }

@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { AlertTriangle, Clock, MapPin, Users, Lock } from 'lucide-react';
 import { MeetingEvent, addDays, fmtDay, fmtTime, sameDay, getCompanyBadge } from './calendarFormat';
+import { useEventHover } from './EventHoverCard';
 
 const FIRST_HOUR = 8;
 const LAST_HOUR = 19;
@@ -42,6 +43,7 @@ interface WeekViewProps {
 }
 
 export default function WeekView({ weekStart, events, onOpenBooking, onSlotClick }: WeekViewProps) {
+  const { bind, card } = useEventHover();
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const today = new Date();
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i);
@@ -146,8 +148,8 @@ export default function WeekView({ weekStart, events, onOpenBooking, onSlotClick
                     <button
                       key={e.id}
                       type="button"
+                      {...bind(e)}
                       onClick={() => onOpenBooking(e)}
-                      title={`${fmtTime(e.start)} - ${fmtTime(e.end)}: ${e.title} (${e.roomName})`}
                       className="absolute z-10 overflow-hidden rounded-lg border border-l-[3px] p-1.5 text-left shadow-xs transition hover:z-30 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       style={{
                         top: top + 2,
@@ -184,6 +186,7 @@ export default function WeekView({ weekStart, events, onOpenBooking, onSlotClick
           })}
         </div>
       </div>
+      {card}
     </div>
   );
 }

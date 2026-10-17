@@ -97,15 +97,6 @@ async function main() {
       capacityMax: 15,
       amenities: JSON.stringify(['Acoustic Soundproofing', 'Large Media Display', 'Studio Mics', '4K Video Conference']),
       colorCode: '#e11d48'
-    },
-    {
-      companyId: companies['MRA_MEDIA'].id,
-      name: 'R. Meeting Ruby',
-      floor: 'Media Wing',
-      capacityMin: 8,
-      capacityMax: 10,
-      amenities: JSON.stringify(['Smart TV 55 Inch', 'Wireless Presentation Pointer', 'Glass Whiteboard']),
-      colorCode: '#7c3aed'
     }
   ];
 

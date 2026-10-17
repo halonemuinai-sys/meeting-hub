@@ -1,4 +1,25 @@
+const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
+const { ROLES } = require('../middleware/auth');
+
+const VALID_ROLES = Object.values(ROLES);
+
+// Never expose the password hash in API responses
+function toPublicUser(u) {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    companyId: u.companyId,
+    companyName: u.company ? u.company.name : 'All Entities (Holding)',
+    companyCode: u.company ? u.company.code : 'MRA_HOLDING',
+    department: u.department || 'General',
+    isActive: u.isActive,
+    lastLogin: u.lastLogin,
+    createdAt: u.createdAt
+  };
+}
 
 async function getUsers(req, res) {
   try {
@@ -21,25 +42,10 @@ async function getUsers(req, res) {
       orderBy: [{ role: 'asc' }, { name: 'asc' }]
     });
 
-    res.json({
-      success: true,
-      data: users.map(u => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        companyId: u.companyId,
-        companyName: u.company ? u.company.name : 'All Entitas (Holding)',
-        companyCode: u.company ? u.company.code : 'MRA_HOLDING',
-        department: u.department || 'General',
-        isActive: u.isActive,
-        lastLogin: u.lastLogin,
-        createdAt: u.createdAt
-      }))
-    });
+    res.json({ success: true, data: users.map(toPublicUser) });
   } catch (err) {
     console.error('getUsers error:', err);
-    res.status(500).json({ success: false, message: 'Gagal memuat data pengguna.' });
+    res.status(500).json({ success: false, message: 'Failed to load users.' });
   }
 }
 
@@ -48,38 +54,42 @@ async function createUser(req, res) {
     const { name, email, role, companyId, department, password } = req.body;
 
     if (!name || !email || !role) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nama, email, dan role wajib diisi.'
-      });
+      return res.status(400).json({ success: false, message: 'Name, email and role are required.' });
+    }
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role.' });
+    }
+    if (!password || String(password).length < 8) {
+      return res.status(400).json({ success: false, message: 'Initial password must be at least 8 characters.' });
     }
 
     const existing = await prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() }
     });
     if (existing) {
-      return res.status(400).json({ success: false, message: 'Email pengguna sudah terdaftar.' });
+      return res.status(400).json({ success: false, message: 'A user with this email already exists.' });
     }
 
     const newUser = await prisma.user.create({
       data: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        role: role || 'USER',
+        role,
         companyId: companyId || null,
-        department: department ? department.trim() : null
+        department: department ? department.trim() : null,
+        password: await bcrypt.hash(String(password), 10)
       },
       include: { company: true }
     });
 
     res.status(201).json({
       success: true,
-      message: 'Pengguna berhasil ditambahkan.',
-      data: newUser
+      message: 'User created successfully.',
+      data: toPublicUser(newUser)
     });
   } catch (err) {
     console.error('createUser error:', err);
-    res.status(500).json({ success: false, message: 'Gagal menambahkan pengguna.' });
+    res.status(500).json({ success: false, message: 'Failed to create user.' });
   }
 }
 
@@ -87,6 +97,18 @@ async function updateUser(req, res) {
   try {
     const { id } = req.params;
     const { name, email, role, companyId, department, isActive } = req.body;
+    const isSelf = id === req.user.id;
+
+    if (role !== undefined && !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role.' });
+    }
+    // Prevent a Super Admin from locking themselves out
+    if (isSelf && role !== undefined && role !== ROLES.SUPER_ADMIN) {
+      return res.status(400).json({ success: false, message: 'You cannot change your own role.' });
+    }
+    if (isSelf && isActive !== undefined && !isActive) {
+      return res.status(400).json({ success: false, message: 'You cannot deactivate your own account.' });
+    }
 
     const data = {};
     if (name !== undefined) data.name = name.trim();
@@ -104,23 +126,26 @@ async function updateUser(req, res) {
 
     res.json({
       success: true,
-      message: 'Data pengguna berhasil diperbarui.',
-      data: updated
+      message: 'User updated successfully.',
+      data: toPublicUser(updated)
     });
   } catch (err) {
     console.error('updateUser error:', err);
-    res.status(500).json({ success: false, message: 'Gagal memperbarui pengguna.' });
+    res.status(500).json({ success: false, message: 'Failed to update user.' });
   }
 }
 
 async function deleteUser(req, res) {
   try {
     const { id } = req.params;
+    if (id === req.user.id) {
+      return res.status(400).json({ success: false, message: 'You cannot delete your own account.' });
+    }
     await prisma.user.delete({ where: { id } });
-    res.json({ success: true, message: 'Pengguna berhasil dihapus.' });
+    res.json({ success: true, message: 'User deleted successfully.' });
   } catch (err) {
     console.error('deleteUser error:', err);
-    res.status(500).json({ success: false, message: 'Gagal menghapus pengguna.' });
+    res.status(500).json({ success: false, message: 'Failed to delete user.' });
   }
 }
 

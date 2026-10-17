@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Users, Clock, AlertTriangle, Sparkles, MapPin, Lock } from 'lucide-react';
-import { MeetingEvent, fmtTime, getCompanyBadge, getCategoryBadge, sameDay } from './calendarFormat';
+import { Users, Lock } from 'lucide-react';
+import { MeetingEvent, fmtTime, getCompanyBadge, sameDay } from './calendarFormat';
+import { useEventHover } from './EventHoverCard';
 
 const FIRST_HOUR = 8;
 const LAST_HOUR = 19;
@@ -23,6 +24,7 @@ export default function RoomTimelineView({
   onOpenBooking,
   onSlotClick
 }: RoomTimelineViewProps) {
+  const { bind, card } = useEventHover();
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i);
   const today = new Date();
   const isToday = sameDay(date, today);
@@ -32,7 +34,7 @@ export default function RoomTimelineView({
   const nowTop = ((nowMinutes - startMinutes) / 60) * ROW_HEIGHT;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
       <div className="min-w-[980px]">
         {/* Room Columns Header */}
         <div
@@ -132,12 +134,11 @@ export default function RoomTimelineView({
                   <div
                     key={h}
                     onClick={() => onSlotClick(room, h)}
-                    title={`Click to book ${room.name} at ${String(h).padStart(2, '0')}:00`}
                     className="group relative cursor-pointer border-b border-slate-100 transition hover:bg-blue-50/40"
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <span className="absolute left-2 top-2 hidden text-[10px] font-semibold text-blue-600 group-hover:inline-block">
-                      + Book slot
+                    <span className="absolute left-2 top-1.5 hidden text-[10px] font-medium text-blue-600 group-hover:inline-block">
+                      + Book {String(h).padStart(2, '0')}:00
                     </span>
                   </div>
                 ))}
@@ -153,60 +154,41 @@ export default function RoomTimelineView({
                   const top = Math.max(0, (startHour - FIRST_HOUR) * ROW_HEIGHT);
                   const height = Math.max(34, (endHour - startHour) * ROW_HEIGHT - 4);
 
+                  const masked = e.isConfidential && !e.canViewConfidential;
+                  const color = masked ? '#64748b' : e.colorCode || '#2563eb';
+
                   return (
                     <button
                       key={e.id}
                       type="button"
+                      {...bind(e)}
                       onClick={(ev) => {
                         ev.stopPropagation();
                         onOpenBooking(e);
                       }}
-                      className={`group absolute inset-x-1.5 z-10 flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 text-left shadow-xs transition hover:z-20 hover:shadow-md focus:outline-none focus:ring-2 ${
-                        e.isConfidential && !e.canViewConfidential
-                          ? 'border-slate-300 bg-gradient-to-br from-slate-100/90 via-white to-slate-50 text-slate-700 hover:border-slate-400 focus:ring-slate-400'
-                          : 'border-blue-200/90 bg-gradient-to-br from-blue-50/95 via-white to-blue-50/80 hover:border-blue-400 focus:ring-blue-500'
-                      }`}
+                      className="group absolute inset-x-1.5 z-10 flex flex-col overflow-hidden rounded-lg border border-l-[3px] px-2.5 py-1.5 text-left transition hover:z-20 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       style={{
                         top: top + 2,
                         height,
-                        borderLeftWidth: '4px',
-                        borderLeftColor: e.isConfidential && !e.canViewConfidential ? '#64748b' : (e.colorCode || '#2563eb')
+                        borderColor: `${color}33`,
+                        borderLeftColor: color,
+                        backgroundColor: `${color}0f`
                       }}
                     >
-                      <div className="min-w-0">
-                        <div className="flex items-center justify-between gap-1 text-[10px] font-bold">
-                          <span className={`flex items-center gap-1 tabular-nums ${e.isConfidential && !e.canViewConfidential ? 'text-slate-600' : 'text-blue-800'}`}>
-                            <Clock className="h-3 w-3 shrink-0" />
-                            {fmtTime(e.start)} - {fmtTime(e.end)}
-                          </span>
-                          {e.isConfidential ? (
-                            <span className="flex items-center gap-0.5 rounded bg-amber-100 border border-amber-300 px-1 py-0.2 text-[9px] font-bold text-amber-800">
-                              <Lock className="h-2 w-2" /> Private
-                            </span>
-                          ) : (
-                            <span className={`rounded border px-1 py-0.2 text-[8px] font-bold ${getCategoryBadge(e.category).bg} ${getCategoryBadge(e.category).text} ${getCategoryBadge(e.category).border} truncate max-w-[90px]`}>
-                              {e.category || `${e.attendeesCount} pax`}
-                            </span>
-                          )}
-                        </div>
-                        <h4 className={`mt-1 truncate text-xs font-bold flex items-center gap-1 ${
-                          e.isConfidential && !e.canViewConfidential ? 'text-slate-700' : 'text-slate-900 group-hover:text-blue-700'
-                        }`}>
-                          {e.isConfidential && e.canViewConfidential && <Lock className="h-3 w-3 text-amber-600 shrink-0" />}
-                          <span className="truncate">{e.title}</span>
-                        </h4>
-                        {height > 52 && (
-                          <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                            {e.isConfidential && !e.canViewConfidential ? 'Confidential Organizer' : `Host: ${e.organizerName} · ${e.department}`}
-                          </p>
-                        )}
-                      </div>
-
-                      {height > 74 && e.specialRequests && (
-                        <div className="mt-1 flex items-center gap-1 text-[9px] text-amber-700 font-medium truncate">
-                          <Sparkles className="h-2.5 w-2.5 shrink-0" />
-                          <span className="truncate">{e.specialRequests}</span>
-                        </div>
+                      <span className="text-[10px] font-semibold tabular-nums text-slate-500">
+                        {fmtTime(e.start)} – {fmtTime(e.end)}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-slate-900">
+                        {e.isConfidential && <Lock className="h-3 w-3 shrink-0 text-slate-500" />}
+                        <span className="truncate">{e.title}</span>
+                      </span>
+                      {height > 56 && (
+                        <span className="mt-0.5 truncate text-[11px] text-slate-500">
+                          {masked ? 'Confidential' : `${e.organizerName} · ${e.department}`}
+                        </span>
+                      )}
+                      {height > 76 && !masked && e.category && (
+                        <span className="mt-auto truncate text-[10px] font-medium text-slate-400">{e.category}</span>
                       )}
                     </button>
                   );
@@ -216,6 +198,7 @@ export default function RoomTimelineView({
           })}
         </div>
       </div>
+      {card}
     </div>
   );
 }

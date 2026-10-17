@@ -74,7 +74,7 @@ async function seedConfidentialDummy() {
       specialRequests: 'High-security escort, specialized jewelry display lighting & white glove inspection kits'
     },
     {
-      roomName: 'R. Meeting Ruby',
+      roomName: 'R. Meeting Diamond',
       title: 'Exclusive Celebrity Artist Broadcasting Contract Renegotiation',
       description: 'Confidential commercial contract discussions, royalty sharing matrix, and multi-platform podcast syndication agreement.',
       organizerName: 'Staff GA Media',

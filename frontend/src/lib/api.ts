@@ -46,6 +46,15 @@ export const api = {
       body: JSON.stringify(payload)
     }),
 
+  createRoom: (payload: any) =>
+    fetcher<{ success: boolean; message: string; data: any }>('/rooms', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
+  deleteRoom: (id: string) =>
+    fetcher<{ success: boolean; message: string }>(`/rooms/${id}`, { method: 'DELETE' }),
+
   // Bookings
   getBookings: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -70,9 +79,14 @@ export const api = {
       body: JSON.stringify({ reason })
     }),
 
-  // Analytics
+  // Analytics & Reports
   getAnalyticsSummary: () =>
     fetcher<{ success: boolean; data: { summary: any; rooms: any[] } }>('/analytics/summary'),
+
+  getReports: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return fetcher<{ success: boolean; data: any }>(`/analytics/reports${qs}`);
+  },
 
   // Master Amenities
   getAmenities: (params?: Record<string, string>) => {

@@ -13,7 +13,6 @@ Sistem terpadu reservasi ruang rapat multi-entitas untuk MRA Group (**PT Mugi Re
 | **PT Mugi Rekso Abadi (Holding)** | Ruang Meeting B | Lantai 2 | 4 – 6 Orang | Smart TV 55", Whiteboard, Extension Power Bar |
 | **PT Mugi Rekso Abadi (Holding)** | Ruang Meeting C | Lantai 2 | 8 – 12 Orang | Smart TV 65", Soundbar Mic, Whiteboard, Air Purifier |
 | **MRA Media** | R. Meeting Diamond | Media Wing / Studio | 12 – 15 Orang | Acoustic Soundproofing, Display Besar, Studio Mics |
-| **MRA Media** | R. Meeting Ruby | Media Wing | 8 – 10 Orang | TV Display 55", Wireless Clicker, Whiteboard |
 
 ---
 

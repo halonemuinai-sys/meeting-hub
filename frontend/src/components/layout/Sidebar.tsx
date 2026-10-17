@@ -1,226 +1,216 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays,
   Building2,
-  ChevronLeft,
-  ChevronRight,
+  DoorOpen,
+  PanelLeftClose,
   ShieldCheck,
-  Sparkles,
+  Armchair,
   UserCheck,
+  BarChart3,
   LogIn,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { can, Permission, ROLE_LABELS } from '@/lib/permissions';
 
-export type MainTab = 'calendar' | 'users' | 'amenities' | 'attendees';
+export type MainTab = 'calendar' | 'rooms' | 'amenities' | 'attendees' | 'reports' | 'users';
+
+export const MENU_ITEMS: {
+  id: MainTab;
+  label: string;
+  icon: React.ElementType;
+  group: string;
+  permission: Permission;
+}[] = [
+  { id: 'calendar', label: 'Meeting Calendar', icon: CalendarDays, group: 'Booking', permission: 'calendar.view' },
+  { id: 'rooms', label: 'Meeting Rooms', icon: DoorOpen, group: 'Facility', permission: 'facility.manage' },
+  { id: 'amenities', label: 'Room Amenities', icon: Armchair, group: 'Facility', permission: 'facility.manage' },
+  { id: 'attendees', label: 'Attendees Directory', icon: UserCheck, group: 'Facility', permission: 'facility.manage' },
+  { id: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Analytics', permission: 'reports.view' },
+  { id: 'users', label: 'Users & Access', icon: ShieldCheck, group: 'Administration', permission: 'users.manage' }
+];
+
+const MENU_GROUPS = ['Booking', 'Facility', 'Analytics', 'Administration'];
 
 interface SidebarProps {
   activeTab: MainTab;
   onSelectTab: (tab: MainTab) => void;
-  collapsed: boolean;
-  onToggleCollapse: () => void;
+  hidden: boolean;
+  onToggleHidden: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }
+
+const getInitials = (name?: string) => {
+  if (!name) return 'MR';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 export default function Sidebar({
   activeTab,
   onSelectTab,
-  collapsed,
-  onToggleCollapse
+  hidden,
+  onToggleHidden,
+  mobileOpen,
+  onCloseMobile
 }: SidebarProps) {
   const { user, logout } = useAuth();
 
-  const getInitials = (name?: string) => {
-    if (!name) return 'MR';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
+  // Close the mobile drawer with Escape and when the viewport grows to desktop size
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseMobile();
+    };
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const onResize = () => {
+      if (desktop.matches) onCloseMobile();
+    };
+    window.addEventListener('keydown', onKey);
+    desktop.addEventListener('change', onResize);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      desktop.removeEventListener('change', onResize);
+    };
+  }, [mobileOpen, onCloseMobile]);
+
+  const handleLogout = () => {
+    if (confirm('Sign out of MRA Meeting Hub?')) logout();
   };
 
-  const getRoleLabel = (role?: string) => {
-    if (role === 'SUPER_ADMIN') return 'Super Admin';
-    if (role === 'GA_ADMIN') return 'GA Admin';
-    if (role === 'USER') return 'Employee User';
-    return 'Guest';
-  };
-
-  const menuItems = [
-    {
-      id: 'calendar' as MainTab,
-      label: 'Meeting Calendar',
-      sublabel: 'Booking & Timeline',
-      icon: CalendarDays,
-      badge: null
-    },
-    {
-      id: 'users' as MainTab,
-      label: 'Users & Access',
-      sublabel: 'Roles & Permissions',
-      icon: ShieldCheck,
-      badge: 'RBAC'
-    },
-    {
-      id: 'amenities' as MainTab,
-      label: 'Room Amenities',
-      sublabel: 'Equipment & Facilities',
-      icon: Sparkles,
-      badge: null
-    },
-    {
-      id: 'attendees' as MainTab,
-      label: 'Attendees Directory',
-      sublabel: 'Employee Directory',
-      icon: UserCheck,
-      badge: null
-    }
-  ];
-
-  return (
-    <aside
-      className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out border-r border-slate-200/90 bg-white shadow-xs flex flex-col justify-between ${
-        collapsed ? 'w-20' : 'w-64'
-      }`}
-    >
-      {/* Top Header / Branding */}
-      <div>
-        <div className="flex h-18 items-center justify-between px-4 border-b border-slate-100">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-700 to-indigo-600 text-white shadow-md shadow-blue-600/20">
-              <Building2 className="h-5 w-5" />
-            </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600 block">
-                  MRA GROUP
-                </span>
-                <h1 className="text-sm font-extrabold text-slate-900 truncate">
-                  Meeting Portal
-                </h1>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-        </div>
-
-        {/* Navigation Items */}
-        <div className="p-3 space-y-1.5">
-          <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            {!collapsed ? 'Main Menu' : '•••'}
-          </div>
-
-          {menuItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectTab(item.id)}
-                title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all ${
-                  isActive
-                    ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/25 ring-2 ring-blue-600/20'
-                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 font-medium'
-                }`}
-              >
-                <item.icon
-                  className={`h-5 w-5 shrink-0 ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-700'
-                  }`}
-                />
-
-                {!collapsed && (
-                  <div className="flex-1 min-w-0 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs leading-none truncate">{item.label}</p>
-                      <p
-                        className={`text-[10px] mt-1 truncate ${
-                          isActive ? 'text-blue-100' : 'text-slate-400'
-                        }`}
-                      >
-                        {item.sublabel}
-                      </p>
-                    </div>
-                    {item.badge && (
-                      <span
-                        className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${
-                          isActive ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+  const renderSidebar = (mobile = false) => (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-20 shrink-0 items-center justify-between gap-3 border-b border-white/10 px-5">
+        <button
+          type="button"
+          onClick={() => {
+            onSelectTab('calendar');
+            onCloseMobile();
+          }}
+          className="flex items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
+          aria-label="Meeting Hub home"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/15 text-blue-300">
+            <Building2 className="h-5 w-5" />
+          </span>
+          <span>
+            <span className="block text-base font-bold tracking-tight text-white">MEETING HUB</span>
+            <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">MRA Group</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={mobile ? onCloseMobile : onToggleHidden}
+          aria-label={mobile ? 'Close navigation' : 'Hide sidebar'}
+          title={mobile ? 'Close navigation' : 'Hide sidebar'}
+          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-blue-400"
+        >
+          {mobile ? <X className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
       </div>
 
-      {/* Bottom User Profile Badge & Auth Actions */}
-      <div className="p-3 border-t border-slate-100">
-        {user ? (
-          <div
-            className={`flex items-center gap-3 rounded-2xl p-2 transition ${
-              collapsed ? 'justify-center' : 'bg-slate-50 border border-slate-100'
-            }`}
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white font-bold text-xs shadow-xs">
-              {getInitials(user.name)}
+      <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-6">
+        {MENU_GROUPS.map((group) => {
+          const items = MENU_ITEMS.filter((item) => item.group === group && can(user, item.permission));
+          if (!items.length) return null;
+          return (
+            <div key={group}>
+              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{group}</p>
+              <ul className="space-y-1">
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectTab(item.id);
+                          onCloseMobile();
+                        }}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`group relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-400 ${
+                          isActive
+                            ? 'bg-white/[0.07] text-white'
+                            : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                        }`}
+                      >
+                        {isActive && <span className="absolute left-0 h-5 w-0.5 rounded-full bg-blue-500" />}
+                        <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-slate-200' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                        <span className="flex-1 leading-relaxed">{item.label}</span>
+                        
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-semibold text-slate-500 truncate">
-                    {getRoleLabel(user.role)} {user.department ? `· ${user.department}` : ''}
-                  </span>
-                </div>
-              </div>
-            )}
-            {!collapsed && (
-              <button
-                type="button"
-                onClick={logout}
-                title="Sign Out"
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition cursor-pointer"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            )}
+          );
+        })}
+      </nav>
+
+      <div className="shrink-0 border-t border-white/10 p-4">
+        {user ? (
+          <div className="flex items-center gap-3 px-1">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-600 bg-slate-800 text-xs font-semibold text-slate-200">
+              {getInitials(user.name)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-100" title={user.name}>{user.name}</p>
+              <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                {ROLE_LABELS[user.role] || user.role}
+                {user.department ? ` · ${user.department}` : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Sign out"
+              title="Sign out"
+              className="shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-blue-400"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         ) : (
           <Link
             href="/login"
-            className={`flex items-center gap-2.5 rounded-2xl p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 transition border border-blue-200/80 ${
-              collapsed ? 'justify-center' : ''
-            }`}
-            title="Sign In to MRA Portal"
+            className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2.5 text-xs font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-blue-400"
           >
-            <LogIn className="h-4 w-4 shrink-0 text-blue-600" />
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold block leading-none">Sign In</span>
-                <span className="text-[10px] text-blue-500 mt-1 block">Access Admin & Booking</span>
-              </div>
-            )}
+            Sign In to Meeting Hub
+            <LogIn className="h-3.5 w-3.5 text-slate-500" />
           </Link>
         )}
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop navigation is fully removed from the tab order when hidden. */}
+      <aside
+        id="desktop-sidebar"
+        aria-label="Sidebar"
+        className={`${hidden ? 'hidden' : 'hidden md:flex'} w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-white`}
+      >
+        {renderSidebar()}
+      </aside>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Main navigation">
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" aria-hidden="true" onClick={onCloseMobile} />
+          <div id="mobile-sidebar" className="relative h-full w-80 max-w-[88vw] bg-slate-900 text-white shadow-2xl">
+            {renderSidebar(true)}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

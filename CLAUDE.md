@@ -27,7 +27,6 @@
 | **PT Mugi Rekso Abadi (Holding)** | Ruang Meeting B | **8th Floor (Lt 8)** | 4 – 6 Pax | Smart TV 55", Whiteboard, Extension Power Bar |
 | **PT Mugi Rekso Abadi (Holding)** | Ruang Meeting C | **8th Floor (Lt 8)** | 8 – 12 Pax | Smart TV 65", Soundbar Mic, Whiteboard, Air Purifier |
 | **MRA Media** | R. Meeting Diamond | Media Wing / Studio | 12 – 15 Pax | Acoustic Soundproofing, Large Media Display, Studio Mics |
-| **MRA Media** | R. Meeting Ruby | Media Wing | 8 – 10 Pax | Smart TV 55", Wireless Presentation Pointer, Glass Whiteboard |
 
 > **Crucial Rule**: Ruang Meeting A, B, and C are located on the **8th Floor (Lt 8)** of MRA Holding.
 
@@ -61,13 +60,31 @@
   `startTime < existingEnd && endTime > existingStart` (excluding cancelled meetings and the current booking ID when editing).
 - Frontend gives instant real-time clash alerts, and the backend performs atomic rejection with HTTP 409 Conflict.
 
-### 5. Authentication & Access Control (`backend/controllers/authController.js`)
+### 5. Meeting Room Management (`RoomsModule.tsx`, `backend/controllers/roomsController.js`)
+- Sidebar menu **Facility → Meeting Rooms** (GA Admin & Super Admin): add, edit, deactivate/reactivate, delete.
+- Everything else is driven by the `Room` table — timeline columns, booking modal list, filters and the Active Rooms counter adapt automatically to the number of active rooms.
+- `GET /api/rooms` returns active rooms only; `?includeInactive=true` is used by the management page.
+- Deactivated rooms (`isActive = false`) disappear from the calendar, booking modal and analytics, and cannot be booked; their bookings stay in the database.
+- Hard delete is only allowed for rooms with no booking history (HTTP 409 otherwise). Room names must be unique per entity.
+
+### 6. Authentication & Access Control (`backend/controllers/authController.js`)
 - JWT-based authentication.
-- Quick 1-click demo login buttons on `/login`:
-  - **Super Admin**: `admin@mra.co.id` / `AdminMRA2026!`
-  - **GA Facility Officer**: `ga.admin@mra.co.id` / `GaMRA2026!`
-  - **Mogems Executive**: `mogems@mra.co.id` / `Mogems2026!`
-- Role-based permissions (`SUPER_ADMIN`, `GA_ADMIN`, `EMPLOYEE`).
+- Quick 1-click demo login buttons on `/login` (seeded password for all: `Admin@123`):
+  - **Super Admin**: `admin@mra.co.id`
+  - **GA Facility Officer**: `ga.holding@mra.co.id`
+  - **Employee**: `user@mra.co.id`
+- Role-based permissions (`SUPER_ADMIN`, `GA_ADMIN`, `USER`), enforced in `backend/middleware/auth.js` (`requireAuth`, `requireRole`, `optionalAuth`) and mirrored on the frontend in `frontend/src/lib/permissions.ts` (`can(user, permission)`). Keep both in sync.
+
+| Capability | SUPER_ADMIN | GA_ADMIN | USER | Guest |
+| :--- | :---: | :---: | :---: | :---: |
+| View calendar | ✓ | ✓ | ✓ | ✓ (confidential masked) |
+| Create booking | ✓ (any organizer) | ✓ (any organizer) | ✓ (organizer forced to self) | ✗ |
+| Cancel booking | all | non-confidential + own | own only | ✗ |
+| Meeting Rooms, Amenities, Attendees (write) | ✓ | ✓ | ✗ | ✗ |
+| Users & Access | ✓ | ✗ | ✗ | ✗ |
+
+- The booking API returns a per-event `canCancel` flag; the UI uses it to show the cancel button.
+- A Super Admin cannot delete, deactivate, or demote their own account.
 
 ---
 
@@ -80,6 +97,8 @@ d:/MRA Project/MRA Booking Meeting Room/
 │   │   └── index.js                 # Express app entrypoint & middleware
 │   ├── config/
 │   │   └── index.js                 # Config loader & environment variables
+│   ├── middleware/
+│   │   └── auth.js                  # requireAuth / requireRole / optionalAuth (RBAC)
 │   ├── controllers/
 │   │   ├── authController.js        # Authentication & JWT verification
 │   │   ├── bookingsController.js    # CRUD, availability, category & confidential logic
@@ -113,13 +132,17 @@ d:/MRA Project/MRA Booking Meeting Room/
 │   │   │   ├── modals/
 │   │   │   │   ├── BookingModal.tsx       # New booking form (category + confidential toggle)
 │   │   │   │   ├── BookingDetailModal.tsx # View meeting details & cancellation
-│   │   │   │   ├── RoomSetupModal.tsx     # GA Room amenities & maintenance editor
+│   │   │   │   ├── RoomFormModal.tsx      # Add / edit room (entity, capacity, color, amenities, maintenance)
 │   │   │   │   ├── AmenitiesMasterModal.tsx
 │   │   │   │   ├── UserAccessModal.tsx
 │   │   │   │   └── AttendeesDirectoryModal.tsx
-│   │   │   └── navigation/
-│   │   │       ├── Sidebar.tsx      # Sidebar with room master & admin directory shortcuts
-│   │   │       └── Navbar.tsx       # Header with current user status & language indicator
+│   │   │   ├── modules/             # Rooms, Amenities, Attendees, Users & Access admin pages
+│   │   │   └── layout/
+│   │   │       ├── Sidebar.tsx      # Dark HR HUB-style sidebar, menu filtered by permission
+│   │   │       └── TopBar.tsx       # Header with sidebar toggle & sign in / out
+│   │   └── lib/
+│   │       ├── api.ts               # API client (sends Bearer token)
+│   │       └── permissions.ts       # can(user, permission) — mirrors backend RBAC
 │   └── package.json
 ├── .gitignore                       # Standard Git ignore (protects .env and node_modules)
 ├── CLAUDE.md                        # This technical handover guide

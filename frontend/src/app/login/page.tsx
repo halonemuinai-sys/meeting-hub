@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Loader2,
   Calendar,
-  Sparkles,
   UserCheck
 } from 'lucide-react';
 import AuthSidePanel from '@/components/auth/AuthSidePanel';
@@ -215,7 +214,6 @@ export default function LoginPage() {
             {/* Quick One-Click Demo Role Switcher */}
             <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
               <div className="flex items-center gap-1.5 mb-2.5">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                 <span className="text-xs font-bold text-slate-800">Quick Demo Accounts (Click to Fill)</span>
               </div>
               <div className="grid grid-cols-2 gap-2">

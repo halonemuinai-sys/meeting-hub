@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Clock, MapPin, Users, Sparkles, Lock } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, StickyNote, Lock } from 'lucide-react';
 import { MeetingEvent, fmtDay, fmtTime, getCompanyBadge, getCategoryBadge, sameDay } from './calendarFormat';
 
 interface AgendaViewProps {
@@ -130,9 +130,9 @@ export default function AgendaView({ events, onOpenBooking }: AgendaViewProps) {
                         </p>
 
                         {e.specialRequests && (
-                          <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-amber-700">
-                            <Sparkles className="h-3 w-3 shrink-0" />
-                            <span>Special Requests: {e.specialRequests}</span>
+                          <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                            <StickyNote className="h-3 w-3 shrink-0 text-slate-400" />
+                            <span>Notes: {e.specialRequests}</span>
                           </div>
                         )}
                       </div>

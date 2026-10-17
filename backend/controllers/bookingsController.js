@@ -1,21 +1,20 @@
-const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
 const { checkRoomConflict, validateBookingInput } = require('../services/conflictService');
 const { sendBookingConfirmation, sendBookingCancellation } = require('../services/mailService');
+const { ROLES } = require('../middleware/auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mra_meeting_room_secret_token_key_2026_super_secure';
+function isOrganizer(user, booking) {
+  return Boolean(user && user.email && user.email.toLowerCase() === booking.organizerEmail.toLowerCase());
+}
 
-function extractUserFromHeader(req) {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    try {
-      const token = authHeader.split(' ')[1];
-      return jwt.verify(token, JWT_SECRET);
-    } catch {
-      return null;
-    }
-  }
-  return null;
+/**
+ * Confidential meetings: only the organizer or a Super Admin may cancel.
+ * Other meetings: the organizer, a GA Admin or a Super Admin may cancel.
+ */
+function canCancelBooking(user, booking) {
+  if (!user) return false;
+  if (user.role === ROLES.SUPER_ADMIN || isOrganizer(user, booking)) return true;
+  return !booking.isConfidential && user.role === ROLES.GA_ADMIN;
 }
 
 /**
@@ -25,7 +24,8 @@ async function getBookings(req, res) {
   try {
     const { from, to, roomId, companyId, status, search, category } = req.query;
 
-    const where = {};
+    // Bookings of deactivated rooms stay in the database but are hidden from the calendar
+    const where = { room: { isActive: true } };
 
     if (status) {
       where.status = status;
@@ -40,7 +40,7 @@ async function getBookings(req, res) {
     }
 
     if (companyId) {
-      where.room = { companyId };
+      where.room.companyId = companyId;
     }
 
     if (from || to) {
@@ -74,7 +74,7 @@ async function getBookings(req, res) {
       orderBy: { startTime: 'asc' }
     });
 
-    const currentUser = extractUserFromHeader(req);
+    const currentUser = req.user;
 
     // Format events for Frontend Calendar
     const events = bookings.map(b => {
@@ -86,14 +86,15 @@ async function getBookings(req, res) {
       }
 
       const isConfidential = Boolean(b.isConfidential);
-      const isCreator = Boolean(currentUser && currentUser.email && currentUser.email.toLowerCase() === b.organizerEmail.toLowerCase());
-      const isSuperAdmin = Boolean(currentUser && currentUser.role === 'SUPER_ADMIN');
+      const isCreator = isOrganizer(currentUser, b);
+      const isSuperAdmin = Boolean(currentUser && currentUser.role === ROLES.SUPER_ADMIN);
       const canViewConfidential = !isConfidential || isCreator || isSuperAdmin;
 
       return {
         id: b.id,
-        title: canViewConfidential ? b.title : '🔒 Reserved (Private Meeting)',
-        description: canViewConfidential ? b.description : 'Details are confidential and visible only to the meeting organizer.',
+        canCancel: b.status !== 'CANCELLED' && canCancelBooking(currentUser, b),
+        title: canViewConfidential ? b.title : 'Private Meeting',
+        description: canViewConfidential ? b.description : 'Details are visible only to the organizer.',
         start: b.startTime.toISOString(),
         end: b.endTime.toISOString(),
         roomId: b.roomId,
@@ -170,7 +171,15 @@ async function checkAvailability(req, res) {
  */
 async function createBooking(req, res) {
   try {
-    const validation = validateBookingInput(req.body);
+    const input = { ...req.body };
+    // Employees always book under their own identity; admins may book on behalf of others
+    if (req.user.role === ROLES.USER) {
+      input.organizerName = req.user.name;
+      input.organizerEmail = req.user.email;
+      input.department = input.department || req.user.department || '';
+    }
+
+    const validation = validateBookingInput(input);
     if (!validation.isValid) {
       return res.status(400).json({
         success: false,
@@ -289,23 +298,20 @@ async function cancelBooking(req, res) {
       return res.status(400).json({ success: false, message: 'This reservation is already cancelled.' });
     }
 
-    const currentUser = extractUserFromHeader(req);
-    if (existing.isConfidential) {
-      const isCreator = Boolean(currentUser && currentUser.email && currentUser.email.toLowerCase() === existing.organizerEmail.toLowerCase());
-      const isSuperAdmin = Boolean(currentUser && currentUser.role === 'SUPER_ADMIN');
-      if (!isCreator && !isSuperAdmin) {
-        return res.status(403).json({
-          success: false,
-          message: 'This is a confidential meeting. Only the organizer or Super Admin can cancel this reservation.'
-        });
-      }
+    if (!canCancelBooking(req.user, existing)) {
+      return res.status(403).json({
+        success: false,
+        message: existing.isConfidential
+          ? 'This is a confidential meeting. Only the organizer or a Super Admin can cancel it.'
+          : 'Only the organizer or a GA / Super Admin can cancel this reservation.'
+      });
     }
 
     const updated = await prisma.booking.update({
       where: { id },
       data: {
         status: 'CANCELLED',
-        cancelReason: reason || 'Cancelled by organizer'
+        cancelReason: reason || `Cancelled by ${req.user.name}`
       },
       include: {
         room: {

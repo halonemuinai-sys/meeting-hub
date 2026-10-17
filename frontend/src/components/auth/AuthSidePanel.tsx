@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, ShieldCheck, MailCheck, Sparkles, Building2 } from 'lucide-react';
+import { Calendar, ShieldCheck, MailCheck, Building2 } from 'lucide-react';
 
 const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   id: i,

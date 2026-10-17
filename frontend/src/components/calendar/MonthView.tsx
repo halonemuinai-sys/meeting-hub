@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { Lock } from 'lucide-react';
 import { MeetingEvent, addDays, fmtTime, sameDay, startOfWeek, getCompanyBadge } from './calendarFormat';
+import { useEventHover } from './EventHoverCard';
 
 interface MonthViewProps {
   anchor: Date;
@@ -11,6 +13,7 @@ interface MonthViewProps {
 }
 
 export default function MonthView({ anchor, events, onOpenBooking, onSelectDay }: MonthViewProps) {
+  const { bind, card } = useEventHover();
   const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const gridStart = startOfWeek(monthStart);
 
@@ -67,15 +70,17 @@ export default function MonthView({ anchor, events, onOpenBooking, onSelectDay }
                     <button
                       key={e.id}
                       type="button"
+                      {...bind(e)}
                       onClick={(ev) => {
                         ev.stopPropagation();
                         onOpenBooking(e);
                       }}
-                      className="w-full truncate rounded border border-slate-200/80 bg-white px-1.5 py-0.5 text-left text-[10px] font-semibold text-slate-800 shadow-2xs hover:border-blue-400 hover:text-blue-600 focus:outline-none"
+                      className="flex w-full items-center gap-1 truncate rounded border border-slate-200/80 bg-white px-1.5 py-0.5 text-left text-[10px] font-semibold text-slate-800 hover:border-blue-400 hover:text-blue-600 focus:outline-none"
                       style={{ borderLeftWidth: '3px', borderLeftColor: e.colorCode || '#2563eb' }}
                     >
-                      <span className="font-mono text-[9px] text-slate-500 mr-1">{fmtTime(e.start)}</span>
-                      {e.isConfidential ? '🔒 ' : ''}{e.title}
+                      <span className="shrink-0 text-[9px] tabular-nums text-slate-500">{fmtTime(e.start)}</span>
+                      {e.isConfidential && <Lock className="h-2.5 w-2.5 shrink-0 text-slate-500" />}
+                      <span className="truncate">{e.title}</span>
                     </button>
                   );
                 })}
@@ -89,6 +94,7 @@ export default function MonthView({ anchor, events, onOpenBooking, onSelectDay }
           );
         })}
       </div>
+      {card}
     </div>
   );
 }
