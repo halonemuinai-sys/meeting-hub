@@ -170,5 +170,23 @@ export const api = {
   logout: () =>
     fetcher<{ success: boolean; message: string }>('/auth/logout', {
       method: 'POST'
+    }),
+
+  forgotPassword: (email: string) =>
+    fetcher<{ success: boolean; message: string; devOtp?: string; resetToken?: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    }),
+
+  verifyResetCode: (payload: { email: string; code: string; token?: string }) =>
+    fetcher<{ success: boolean; message: string }>('/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
+  resetPassword: (payload: { email: string; code?: string; newPassword: string; token?: string }) =>
+    fetcher<{ success: boolean; message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(payload)
     })
 };

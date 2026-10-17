@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  CheckCircle2,
   Loader2,
   Calendar,
   UserCheck
@@ -53,7 +54,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Check URL query parameters for reset success
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get('reset') === 'success') {
+        setSuccessMsg('Your password has been reset successfully! Please sign in with your new password.');
+      }
+      if (sp.get('email')) {
+        setEmail(sp.get('email') || '');
+      }
+    }
+  }, []);
 
   // If already logged in, redirect to home
   useEffect(() => {
@@ -131,6 +146,18 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Success Message Alert (e.g. after password reset) */}
+            {successMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold"
+              >
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                <span>{successMsg}</span>
+              </motion.div>
+            )}
+
             {/* Error Message Alert */}
             {apiError && (
               <motion.div
@@ -153,7 +180,11 @@ export default function LoginPage() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setApiError(null);
+                      setSuccessMsg(null);
+                    }}
                     placeholder="e.g. aris@mra.co.id"
                     required
                     className={inputCls}
@@ -166,7 +197,12 @@ export default function LoginPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700">Password</label>
-                  <span className="text-[10px] text-slate-400">Default demo: Admin@123</span>
+                  <Link
+                    href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none" />

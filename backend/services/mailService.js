@@ -219,8 +219,96 @@ async function sendBookingCancellation(booking, room, company, reason = '') {
   }
 }
 
+/**
+ * Send Password Reset Email with OTP Code & Direct Link
+ */
+async function sendPasswordResetEmail(user, code, resetLink = '') {
+  try {
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+        .container { max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
+        .content { padding: 32px 28px; }
+        .greeting { font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 12px; }
+        .text { font-size: 13px; line-height: 1.6; color: #475569; margin: 0 0 20px; }
+        .code-box { background: #f0fdf4; border: 2px dashed #16a34a; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }
+        .code-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #15803d; letter-spacing: 1px; margin-bottom: 6px; }
+        .code-value { font-size: 34px; font-weight: 900; letter-spacing: 8px; color: #166534; font-family: 'Courier New', Courier, monospace; margin: 0; }
+        .btn-wrap { text-align: center; margin: 24px 0; }
+        .btn { display: inline-block; background: #2563eb; color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; padding: 12px 28px; border-radius: 10px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
+        .footer { background: #f8fafc; padding: 20px 24px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>MRA Group Meeting Hub</h1>
+          <p>Security & Authentication Service</p>
+        </div>
+        <div class="content">
+          <div class="greeting">Hello, ${user.name || 'MRA Team Member'}</div>
+          <p class="text">
+            We received a request to reset the password for your account associated with <strong>${user.email}</strong>. Use the 6-digit verification code below to authorize your password change.
+          </p>
+
+          <div class="code-box">
+            <div class="code-label">Verification OTP Code</div>
+            <div class="code-value">${code}</div>
+            <p style="margin: 8px 0 0; font-size: 11px; color: #15803d;">This code is valid for 15 minutes.</p>
+          </div>
+
+          ${resetLink ? `
+          <div class="btn-wrap">
+            <a href="${resetLink}" class="btn" target="_blank">Reset Password Directly</a>
+          </div>
+          ` : ''}
+
+          <p class="text" style="font-size: 11px; color: #64748b; margin-top: 24px;">
+            If you did not initiate this request, you can safely ignore this email. Your password will remain unchanged.
+          </p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} MRA Group · Corporate IT & General Affairs · Wisma MRA
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const mailOptions = {
+      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'helpdesk@mraretail.co.id'}>`,
+      to: user.email,
+      subject: `[MRA Portal] Password Reset Verification Code: ${code}`,
+      html: htmlContent
+    };
+
+    const mailMode = process.env.MAIL_MODE || 'log';
+    if (mailMode === 'smtp') {
+      const client = getTransporter();
+      if (client) {
+        await client.sendMail(mailOptions);
+        console.log(`[MAIL] Password reset email sent to: ${user.email}`);
+        return;
+      }
+    }
+
+    console.log(`[MAIL MOCK] Password reset OTP for ${user.email}: ${code}`);
+  } catch (err) {
+    console.error('[MAIL ERROR] Failed to send password reset email:', err);
+  }
+}
+
 module.exports = {
   sendBookingConfirmation,
   sendBookingCancellation,
+  sendPasswordResetEmail,
   formatEnglishDate
 };
+
