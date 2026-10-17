@@ -75,16 +75,25 @@
   - **Employee**: `user@mra.co.id`
 - Role-based permissions (`SUPER_ADMIN`, `GA_ADMIN`, `USER`), enforced in `backend/middleware/auth.js` (`requireAuth`, `requireRole`, `optionalAuth`) and mirrored on the frontend in `frontend/src/lib/permissions.ts` (`can(user, permission)`). Keep both in sync.
 
-| Capability | SUPER_ADMIN | GA_ADMIN | USER | Guest |
-| :--- | :---: | :---: | :---: | :---: |
-| View calendar | ✓ | ✓ | ✓ | ✓ (confidential masked) |
-| Create booking | ✓ (any organizer) | ✓ (any organizer) | ✓ (organizer forced to self) | ✗ |
-| Cancel booking | all | non-confidential + own | own only | ✗ |
-| Meeting Rooms, Amenities, Attendees (write) | ✓ | ✓ | ✗ | ✗ |
-| Users & Access | ✓ | ✗ | ✗ | ✗ |
+### 7. Reports & Room Analytics (`ReportsModule.tsx`, `backend/controllers/analyticsController.js`)
+- Sidebar menu **Analytics → Reports & Analytics** (accessible by `SUPER_ADMIN` and `GA_ADMIN`).
+- Executive KPI Cards: Total Meetings, Confirmed, Cancelled, Total Runtime Hours, Avg Duration (min), and Avg Pax.
+- Visual Analytics:
+  - **Room Utilization Ranking**: Bar indicators measuring reserved hours per meeting room.
+  - **Peak Hours Heatmap**: Hourly activity volume (08:00 – 19:00 WIB).
+  - **Category & Department Distribution**: Breakdown by meeting type and booking departments.
+- Detailed Log Table with search filtering and **Export to CSV / Excel** and **Print Report**.
 
-- The booking API returns a per-event `canCancel` flag; the UI uses it to show the cancel button.
-- A Super Admin cannot delete, deactivate, or demote their own account.
+### 8. Forgot Password & Recovery Flow (`/forgot-password`, `mailService.js`)
+- 3-step password recovery wizard with work email verification and signed JWT token.
+- Issues a 6-digit numeric OTP code valid for 15 minutes sent via branded corporate MRA email.
+- Includes a test-mode autofill helper (`devOtp`) for local development without active SMTP credentials.
+- Enforces min 6 characters and password confirmation matching.
+
+### 9. Animated Luxury Logout Confirmation (`LogoutModal.tsx`)
+- Replaces native browser alerts with a Framer Motion spring-animated executive pop-up.
+- Shows signed-in user identity (avatar initials, full name, role badge, company, department, email).
+- Provides "Stay Signed In" (secondary) and glowing "Sign Out Now" with loader feedback.
 
 ---
 
