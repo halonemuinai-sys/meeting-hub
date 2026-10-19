@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { checkRoomConflict, validateBookingInput } = require('../services/conflictService');
 const { sendBookingConfirmation, sendBookingCancellation } = require('../services/mailService');
+const { inferNameAndEntityFromEmail } = require('./attendeesController');
 const { ROLES } = require('../middleware/auth');
 
 function isOrganizer(user, booking) {
@@ -260,6 +261,34 @@ async function createBooking(req, res) {
     sendBookingConfirmation(newBooking, room, room.company).catch(err => {
       console.error('Async mail error:', err);
     });
+
+    // Auto-persist any newly typed attendee emails into the master Attendee directory
+    // so that Admin / GA can review and refine their company & department later
+    try {
+      const attendeeEmails = bookingData.attendees ? JSON.parse(bookingData.attendees) : [];
+      if (Array.isArray(attendeeEmails) && attendeeEmails.length > 0) {
+        prisma.company.findMany().then(async (companies) => {
+          for (const em of attendeeEmails) {
+            const exists = await prisma.attendee.findUnique({ where: { email: em } });
+            if (!exists) {
+              const inf = inferNameAndEntityFromEmail(em, companies);
+              await prisma.attendee.create({
+                data: {
+                  fullName: inf.fullName,
+                  email: inf.email,
+                  companyId: inf.companyId,
+                  department: inf.department,
+                  jobTitle: inf.jobTitle,
+                  phone: null
+                }
+              }).catch(() => {});
+            }
+          }
+        }).catch(() => {});
+      }
+    } catch (e) {
+      // Non-blocking
+    }
 
     return res.status(201).json({
       success: true,

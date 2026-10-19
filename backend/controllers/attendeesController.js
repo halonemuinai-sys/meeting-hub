@@ -104,9 +104,118 @@ async function deleteAttendee(req, res) {
   }
 }
 
+/**
+ * Helper to infer reasonable name & corporate entity defaults from email
+ */
+function inferNameAndEntityFromEmail(rawEmail, companies) {
+  const email = rawEmail.trim().toLowerCase();
+  const [handle, domain] = email.split('@');
+
+  // Format handle to Title Case Name (e.g. "budi.santoso" -> "Budi Santoso", "clarissa_wijaya" -> "Clarissa Wijaya")
+  const rawParts = (handle || 'New Attendee').split(/[._\-+]/).filter(Boolean);
+  const fullName = rawParts
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(' ') || 'New Attendee';
+
+  // Find matching company by domain
+  let matchedCompany = null;
+  if (domain) {
+    if (domain.includes('mogems')) {
+      matchedCompany = companies.find(c => c.code === 'MOGEMS');
+    } else if (domain.includes('media') || domain.includes('mramedia')) {
+      matchedCompany = companies.find(c => c.code === 'MRA_MEDIA');
+    } else if (domain.includes('mra')) {
+      matchedCompany = companies.find(c => c.code === 'MRA_HOLDING');
+    }
+  }
+
+  // Fallback to first company (MRA Holding)
+  const defaultCompany = matchedCompany || companies[0];
+
+  return {
+    email,
+    fullName,
+    companyId: defaultCompany?.id,
+    companyName: defaultCompany?.name,
+    department: 'Pending Admin Review',
+    jobTitle: 'Meeting Attendee'
+  };
+}
+
+/**
+ * Quick Add Attendees by Email Only
+ * Accepts single email or array of emails. Smartly registers to database so Admin can refine later.
+ */
+async function quickAddAttendee(req, res) {
+  try {
+    const { email, emails } = req.body;
+    const rawList = Array.isArray(emails) ? emails : [email];
+    const sanitizedEmails = rawList
+      .map(e => String(e || '').trim().toLowerCase())
+      .filter(e => e && e.includes('@'));
+
+    if (sanitizedEmails.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide at least one valid work email address.'
+      });
+    }
+
+    const companies = await prisma.company.findMany();
+    if (companies.length === 0) {
+      return res.status(500).json({ success: false, message: 'No company entities found.' });
+    }
+
+    const results = [];
+    for (const em of sanitizedEmails) {
+      const existing = await prisma.attendee.findUnique({
+        where: { email: em },
+        include: { company: true }
+      });
+
+      if (existing) {
+        results.push({ ...existing, isExisting: true });
+        continue;
+      }
+
+      const inferred = inferNameAndEntityFromEmail(em, companies);
+      const created = await prisma.attendee.create({
+        data: {
+          fullName: inferred.fullName,
+          email: inferred.email,
+          companyId: inferred.companyId,
+          department: inferred.department,
+          jobTitle: inferred.jobTitle,
+          phone: null
+        },
+        include: { company: true }
+      });
+      results.push({ ...created, isExisting: false, isPendingReview: true });
+    }
+
+    const newlyAdded = results.filter(r => !r.isExisting);
+    const countNew = newlyAdded.length;
+
+    return res.status(201).json({
+      success: true,
+      message: countNew > 0
+        ? `${countNew} new attendee(s) successfully added by email. Admin can refine company & department details later.`
+        : 'All provided emails are already registered in the directory.',
+      data: results,
+      newlyAdded
+    });
+  } catch (err) {
+    console.error('quickAddAttendee error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to quick add attendee: ' + err.message });
+  }
+}
+
 module.exports = {
   getAttendees,
   createAttendee,
   updateAttendee,
-  deleteAttendee
+  deleteAttendee,
+  quickAddAttendee,
+  inferNameAndEntityFromEmail
 };
+

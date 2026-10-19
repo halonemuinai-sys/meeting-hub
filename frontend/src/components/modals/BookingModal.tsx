@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   Loader2,
   Lock,
+  Mail,
   Pencil,
   Search,
+  Sparkles,
   Users,
   X
 } from 'lucide-react';
@@ -628,18 +630,62 @@ export default function BookingModal({
                           }}
                           className="w-full bg-transparent py-1 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
                         />
+                        {attendeeSearch.trim().includes('@') && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addAttendee(attendeeSearch);
+                            }}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700"
+                          >
+                            + Add
+                          </button>
+                        )}
                       </div>
                     </div>
 
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <Sparkles className="h-3 w-3 shrink-0 text-blue-500" />
+                      <span>Invite anyone by typing their work email. New emails are auto-saved to the directory for Admin review.</span>
+                    </div>
+
                     <AnimatePresence>
-                      {showDirectory && filteredDirectory.length > 0 && (
+                      {showDirectory && (filteredDirectory.length > 0 || attendeeSearch.trim().includes('@')) && (
                         <motion.ul
                           initial={{ opacity: 0, y: -4 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -4 }}
                           transition={{ duration: 0.12 }}
-                          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
+                          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
                         >
+                          {attendeeSearch.trim().includes('@') &&
+                            !filteredDirectory.some(
+                              (f) => f.email.toLowerCase() === attendeeSearch.trim().toLowerCase()
+                            ) && (
+                              <li key="quick-custom-email">
+                                <button
+                                  type="button"
+                                  onClick={() => addAttendee(attendeeSearch)}
+                                  className="flex w-full items-center justify-between rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-2 text-left transition-colors hover:bg-blue-100"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="h-4 w-4 shrink-0 text-blue-600" />
+                                    <div className="min-w-0">
+                                      <p className="truncate text-xs font-bold text-blue-900">
+                                        Add &ldquo;{attendeeSearch.trim()}&rdquo;
+                                      </p>
+                                      <p className="text-[10px] text-blue-700">
+                                        Auto-saves to directory for Admin review
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                                    + Add Email
+                                  </span>
+                                </button>
+                              </li>
+                            )}
                           {filteredDirectory.map((item) => (
                             <li key={item.id}>
                               <button

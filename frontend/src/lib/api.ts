@@ -123,6 +123,12 @@ export const api = {
       body: JSON.stringify(payload)
     }),
 
+  quickAddAttendee: (payload: { email?: string; emails?: string[] }) =>
+    fetcher<{ success: boolean; message: string; data: any[]; newlyAdded?: any[] }>('/attendees/quick-add', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
   updateAttendee: (id: string, payload: any) =>
     fetcher<{ success: boolean; message: string; data: any }>(`/attendees/${id}`, {
       method: 'PUT',
