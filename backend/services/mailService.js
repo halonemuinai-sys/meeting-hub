@@ -18,6 +18,9 @@ function getTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false
+      }
     });
   }
   return transporter;
@@ -123,7 +126,7 @@ async function sendBookingConfirmation(booking, room, company) {
     `;
 
     const mailOptions = {
-      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'helpdesk@mraretail.co.id'}>`,
+      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'meeting@mra.co.id'}>`,
       to: recipientEmails.join(', '),
       subject: `[CONFIRMED] Meeting Room Booking: ${booking.title} (${room.name})`,
       html: htmlContent,
@@ -197,7 +200,7 @@ async function sendBookingCancellation(booking, room, company, reason = '') {
     `;
 
     const mailOptions = {
-      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'helpdesk@mraretail.co.id'}>`,
+      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'meeting@mra.co.id'}>`,
       to: recipientEmails.join(', '),
       subject: `[CANCELLED] Meeting Room Cancelled: ${booking.title}`,
       html: htmlContent
@@ -283,7 +286,7 @@ async function sendPasswordResetEmail(user, code, resetLink = '') {
     `;
 
     const mailOptions = {
-      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'helpdesk@mraretail.co.id'}>`,
+      from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'meeting@mra.co.id'}>`,
       to: user.email,
       subject: `[MRA Portal] Password Reset Verification Code: ${code}`,
       html: htmlContent
