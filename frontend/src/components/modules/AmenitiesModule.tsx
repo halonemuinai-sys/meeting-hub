@@ -1,18 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Armchair, CheckCircle2, DoorOpen, Layers3, Monitor, Pencil, Plus, Search, SlidersHorizontal, Trash2, Volume2, Wifi } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   FormDialog,
   IconAction,
   Notice,
-  PageHeader,
-  SearchInput,
-  SegmentedFilter,
   TableShell,
   TableState,
-  Toolbar,
   inputCls,
   labelCls,
   thCls,
@@ -21,10 +17,10 @@ import {
 } from '@/components/ui/admin';
 
 const CATEGORIES = [
-  { id: 'VISUAL_DISPLAY', label: 'Displays' },
-  { id: 'AUDIO_CONFERENCE', label: 'Audio & Conference' },
-  { id: 'CONNECTIVITY', label: 'Connectivity' },
-  { id: 'ROOM_COMFORT', label: 'Comfort' }
+  { id: 'VISUAL_DISPLAY', label: 'Displays', icon: Monitor, tone: 'bg-blue-50 text-blue-600' },
+  { id: 'AUDIO_CONFERENCE', label: 'Audio & Conference', icon: Volume2, tone: 'bg-violet-50 text-violet-600' },
+  { id: 'CONNECTIVITY', label: 'Connectivity', icon: Wifi, tone: 'bg-cyan-50 text-cyan-700' },
+  { id: 'ROOM_COMFORT', label: 'Comfort', icon: Armchair, tone: 'bg-amber-50 text-amber-700' }
 ];
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 
@@ -107,72 +103,119 @@ export default function AmenitiesModule() {
     });
   }, [amenities, category, search]);
 
+  const assignedCount = amenities.filter((a) => a.assignedRooms?.length).length;
+  const initialLoading = loading && !amenities.length;
   const filterOptions = [
-    { id: '', label: 'All', count: amenities.length },
-    ...CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: amenities.filter((a) => a.category === c.id).length }))
+    { id: '', label: 'All amenities', icon: Layers3, tone: 'bg-slate-100 text-slate-600', count: amenities.length },
+    ...CATEGORIES.map((c) => ({ ...c, count: amenities.filter((a) => a.category === c.id).length }))
   ];
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Room Amenities"
-        description="Equipment and facilities that can be assigned to meeting rooms."
-        actionLabel="Add Amenity"
-        onAction={() => openModal(null)}
-      />
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-white to-blue-50 p-5 sm:p-7">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border-[40px] border-blue-100/40" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <span className="mb-3 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600"><Layers3 className="h-3.5 w-3.5" /> Facility management</span>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Room Amenities</h1>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-500">The details that make every meeting better. Manage equipment and comforts across your meeting rooms.</p>
+          </div>
+          <button type="button" onClick={() => openModal(null)} className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:self-center">
+            <Plus className="h-4 w-4" /> Add Amenity
+          </button>
+        </div>
+        <div className="relative mt-6 grid grid-cols-1 gap-3 border-t border-slate-200/70 pt-5 sm:grid-cols-3">
+          {[
+            { label: 'Total amenities', value: amenities.length, icon: Layers3, tone: 'bg-blue-100/70 text-blue-600' },
+            { label: 'Assigned to rooms', value: assignedCount, icon: CheckCircle2, tone: 'bg-emerald-100/70 text-emerald-600' },
+            { label: 'Not yet assigned', value: amenities.length - assignedCount, icon: DoorOpen, tone: 'bg-amber-100/70 text-amber-600' }
+          ].map((stat) => (
+            <div key={stat.label} className="flex items-center gap-3">
+              <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.tone}`}><stat.icon className="h-5 w-5" /></span>
+              <div><p className="text-xl font-bold tabular-nums text-slate-900">{initialLoading ? '...' : stat.value}</p><p className="text-xs text-slate-500">{stat.label}</p></div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <Notice notice={notice} />
 
-      <Toolbar>
-        <SegmentedFilter options={filterOptions} value={category} onChange={setCategory} />
-        <SearchInput value={search} onChange={setSearch} placeholder="Search amenities" />
-      </Toolbar>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5" aria-label="Filter amenities by category">
+        {filterOptions.map((option) => (
+          <button key={option.id} type="button" aria-pressed={category === option.id} onClick={() => setCategory(option.id)} className={`flex items-center gap-2.5 rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${category === option.id ? 'border-blue-300 bg-blue-50/60 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'}`}>
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${option.tone}`}><option.icon className="h-4 w-4" /></span>
+            <span className="min-w-0 flex-1 text-xs font-semibold text-slate-700">{option.label}</span>
+            <span className="text-xs font-semibold tabular-nums text-slate-500">{initialLoading ? '...' : option.count}</span>
+          </button>
+        ))}
+      </div>
 
-      <TableShell>
-        <thead className={theadCls}>
-          <tr>
-            <th className={thCls}>Amenity</th>
-            <th className={thCls}>Category</th>
-            <th className={thCls}>Installed in</th>
-            <th className={`${thCls} text-right`}>Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {(loading && !amenities.length) || filtered.length === 0 ? (
-            <TableState colSpan={4} loading={loading && !amenities.length} empty="No amenities found" />
-          ) : (
-            filtered.map((a) => (
-              <tr key={a.id} className="transition-colors hover:bg-slate-50/60">
-                <td className="px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-900">{a.name}</p>
-                  {a.description && <p className="mt-0.5 max-w-md truncate text-xs text-slate-400">{a.description}</p>}
-                </td>
-                <td className="px-4 py-3 text-slate-600">{CATEGORY_LABEL[a.category] || a.category}</td>
-                <td className="px-4 py-3">
-                  {a.assignedRooms?.length ? (
-                    <span className="text-slate-600" title={a.assignedRooms.join(', ')}>
-                      {a.assignedRooms.slice(0, 2).join(', ')}
-                      {a.assignedRooms.length > 2 && <span className="text-slate-400"> +{a.assignedRooms.length - 2}</span>}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Not assigned</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    <IconAction label={`Edit ${a.name}`} onClick={() => openModal(a)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </IconAction>
-                    <IconAction label={`Delete ${a.name}`} tone="danger" onClick={() => handleDelete(a)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </IconAction>
-                  </div>
-                </td>
+      <section aria-label="Amenities catalog" aria-busy={loading} className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-sm text-slate-500"><SlidersHorizontal className="h-4 w-4" /><h2 className="font-semibold text-slate-800">{CATEGORY_LABEL[category] || 'All amenities'}</h2><span aria-live="polite" className="text-xs">{loading ? 'Loading...' : `${filtered.length} items`}</span></div>
+          <div className="relative sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input aria-label="Search amenities" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search amenities..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+          </div>
+        </div>
+        {!initialLoading && filtered.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-500"><Armchair className="h-7 w-7" /></span>
+            <h3 className="mt-4 text-base font-semibold text-slate-900">{search || category ? 'No matching amenities' : 'Start with the essentials'}</h3>
+            <p className="mt-2 text-sm text-slate-500">{search || category ? 'Try another keyword or clear your filters.' : 'Add your first amenity to build your room equipment catalog.'}</p>
+            <button type="button" onClick={() => { if (search || category) { setSearch(''); setCategory(''); } else openModal(null); }} className="mt-5 rounded-lg bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100">{search || category ? 'Clear filters' : 'Add Amenity'}</button>
+          </div>
+        ) : (
+          <TableShell minWidth={760}>
+            <thead className={theadCls}>
+              <tr>
+                <th className={thCls}>Amenity</th>
+                <th className={thCls}>Category</th>
+                <th className={thCls}>Installed In</th>
+                <th className={`${thCls} text-right`}>Actions</th>
               </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {initialLoading ? (
+                <TableState colSpan={4} loading empty="No amenities found" />
+              ) : (
+                filtered.map((a) => {
+                  const style = CATEGORIES.find((c) => c.id === a.category);
+                  const AmenityIcon = style?.icon || Armchair;
+                  const rooms: string[] = a.assignedRooms || [];
+                  return (
+                    <tr key={a.id} className="transition-colors hover:bg-slate-50/60">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style?.tone || 'bg-slate-100 text-slate-600'}`}><AmenityIcon className="h-4 w-4" /></span>
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold text-slate-900">{a.name}</p>
+                            <p className="break-words text-xs text-slate-400">{a.description || 'No description added.'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{CATEGORY_LABEL[a.category] || a.category}</td>
+                      <td className="px-4 py-3">
+                        {rooms.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">{rooms.map((room, index) => <span key={`${room}-${index}`} className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">{room}</span>)}</div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Not assigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <IconAction label={`Edit ${a.name}`} onClick={() => openModal(a)}><Pencil className="h-4 w-4" /></IconAction>
+                          <IconAction label={`Delete ${a.name}`} tone="danger" onClick={() => handleDelete(a)}><Trash2 className="h-4 w-4" /></IconAction>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </TableShell>
+        )}
+      </section>
 
       <FormDialog
         open={modalOpen}
