@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mra-meeting-backend
+    restart: unless-stopped
+    ports:
+      - "5007:5007"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5007
+      - NODE_ENV=production
+    networks:
+      - meeting-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=/api
+    container_name: mra-meeting-frontend
+    restart: unless-stopped
+    ports:
+      - "3007:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - backend
+    networks:
+      - meeting-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: mra-meeting-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - meeting-net
+
+networks:
+  meeting-net:
+    driver: bridge
