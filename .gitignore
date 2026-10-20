@@ -45,3 +45,6 @@ desktop.ini
 *.dll.node
 *.dylib.node
 *.so.node
+
+# TypeScript incremental build cache
+*.tsbuildinfo
