@@ -44,9 +44,18 @@ function formatEnglishDate(date) {
  */
 async function sendBookingConfirmation(booking, room, company) {
   try {
-    const rawAttendees = booking.attendees ? JSON.parse(booking.attendees) : [];
+    let rawAttendees = [];
+    if (Array.isArray(booking.attendees)) {
+      rawAttendees = booking.attendees;
+    } else if (typeof booking.attendees === 'string' && booking.attendees.trim()) {
+      try {
+        rawAttendees = JSON.parse(booking.attendees);
+      } catch (_) {
+        rawAttendees = booking.attendees.split(/[,;\s]+/).filter(Boolean);
+      }
+    }
     const recipientEmails = Array.from(
-      new Set([booking.organizerEmail, ...rawAttendees].filter(e => e && e.includes('@')))
+      new Set([booking.organizerEmail, ...rawAttendees].filter(e => e && typeof e === 'string' && e.includes('@')).map(e => e.trim().toLowerCase()))
     );
 
     if (recipientEmails.length === 0) {
@@ -54,7 +63,8 @@ async function sendBookingConfirmation(booking, room, company) {
       return;
     }
 
-    const icsContent = generateIcs(booking, room, company, recipientEmails);
+    const companyObj = company || room?.company || { name: 'MRA Group' };
+    const icsContent = generateIcs(booking, room, companyObj, recipientEmails);
     const dateFormatted = `${formatEnglishDate(booking.startTime)} - ${new Date(booking.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })} WIB`;
 
     const htmlContent = `
@@ -178,19 +188,30 @@ async function sendBookingConfirmation(booking, room, company) {
  */
 async function sendBookingCancellation(booking, room, company, reason = '') {
   try {
-    const rawAttendees = booking.attendees ? JSON.parse(booking.attendees) : [];
+    let rawAttendees = [];
+    if (Array.isArray(booking.attendees)) {
+      rawAttendees = booking.attendees;
+    } else if (typeof booking.attendees === 'string' && booking.attendees.trim()) {
+      try {
+        rawAttendees = JSON.parse(booking.attendees);
+      } catch (_) {
+        rawAttendees = booking.attendees.split(/[,;\s]+/).filter(Boolean);
+      }
+    }
     const recipientEmails = Array.from(
-      new Set([booking.organizerEmail, ...rawAttendees].filter(e => e && e.includes('@')))
+      new Set([booking.organizerEmail, ...rawAttendees].filter(e => e && typeof e === 'string' && e.includes('@')).map(e => e.trim().toLowerCase()))
     );
 
     if (recipientEmails.length === 0) return;
+
+    const companyName = company?.name || room?.company?.name || 'MRA Group';
 
     const htmlContent = `
     <div style="font-family: sans-serif; padding: 20px; color: #1e293b;">
       <h2 style="color: #dc2626;">[CANCELLED] Meeting Reservation: ${booking.title}</h2>
       <p>Notice: The following meeting room reservation has been cancelled:</p>
       <ul>
-        <li><strong>Room:</strong> ${room.name} (${company.name})</li>
+        <li><strong>Room:</strong> ${room.name} (${companyName})</li>
         <li><strong>Time:</strong> ${formatEnglishDate(booking.startTime)}</li>
         <li><strong>Organizer:</strong> ${booking.organizerName}</li>
         ${reason ? `<li><strong>Cancellation Reason:</strong> ${reason}</li>` : ''}

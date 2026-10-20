@@ -209,12 +209,22 @@ export default function BookingModal({
     setEnd(fromMinutes(Math.min(toMinutes(value) + keep, maxEnd)));
   };
 
-  const addAttendee = (email: string) => {
-    const trimmed = email.trim().toLowerCase();
-    if (trimmed && trimmed.includes('@') && !attendees.includes(trimmed)) {
-      const updated = [...attendees, trimmed];
-      setAttendees(updated);
-      setAttendeesCount((c) => Math.max(updated.length + 1, c));
+  const addAttendee = (raw: string) => {
+    if (!raw) return;
+    const emails = raw
+      .split(/[\s,;]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e && e.includes('@'));
+
+    if (emails.length > 0) {
+      setAttendees((prev) => {
+        const next = [...prev];
+        emails.forEach((em) => {
+          if (!next.includes(em)) next.push(em);
+        });
+        setAttendeesCount((c) => Math.max(next.length + 1, c));
+        return next;
+      });
     }
     setAttendeeSearch('');
   };
@@ -236,6 +246,18 @@ export default function BookingModal({
     e.preventDefault();
     if (step !== 2) return;
     setErrorMessage('');
+
+    let finalAttendees = [...attendees];
+    if (attendeeSearch.trim().includes('@')) {
+      const pendingEmails = attendeeSearch
+        .split(/[\s,;]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e && e.includes('@'));
+      pendingEmails.forEach((em) => {
+        if (!finalAttendees.includes(em)) finalAttendees.push(em);
+      });
+    }
+
     setSubmitting(true);
     try {
       const res = await api.createBooking({
@@ -250,8 +272,8 @@ export default function BookingModal({
         category,
         isConfidential,
         specialRequests,
-        attendees,
-        attendeesCount
+        attendees: finalAttendees,
+        attendeesCount: Math.max(finalAttendees.length + 1, attendeesCount)
       });
       onSuccess(res.message);
     } catch (err: any) {
@@ -620,12 +642,26 @@ export default function BookingModal({
                             setShowDirectory(true);
                           }}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ',') {
-                              e.preventDefault();
-                              if (attendeeSearch.includes('@')) addAttendee(attendeeSearch);
-                              else if (filteredDirectory[0]) addAttendee(filteredDirectory[0].email);
+                            if (['Enter', ',', ';', 'Tab'].includes(e.key)) {
+                              if (attendeeSearch.trim()) {
+                                e.preventDefault();
+                                if (attendeeSearch.includes('@')) addAttendee(attendeeSearch);
+                                else if (filteredDirectory[0]) addAttendee(filteredDirectory[0].email);
+                              }
                             } else if (e.key === 'Backspace' && !attendeeSearch && attendees.length) {
                               setAttendees(attendees.slice(0, -1));
+                            }
+                          }}
+                          onPaste={(e) => {
+                            const pasted = e.clipboardData.getData('text');
+                            if (pasted && pasted.includes('@')) {
+                              e.preventDefault();
+                              addAttendee(pasted);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (attendeeSearch.trim().includes('@')) {
+                              addAttendee(attendeeSearch);
                             }
                           }}
                           className="w-full bg-transparent py-1 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"

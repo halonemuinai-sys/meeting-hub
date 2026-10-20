@@ -308,7 +308,7 @@ async function createBooking(req, res) {
 async function cancelBooking(req, res) {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const reason = req.body.reason || req.body.cancelReason || '';
 
     const existing = await prisma.booking.findUnique({
       where: { id },

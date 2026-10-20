@@ -8,5 +8,6 @@ router.get('/', optionalAuth, bookingsController.getBookings);
 router.post('/check-availability', bookingsController.checkAvailability);
 router.post('/', requireAuth, bookingsController.createBooking);
 router.post('/:id/cancel', requireAuth, bookingsController.cancelBooking);
+router.put('/:id/cancel', requireAuth, bookingsController.cancelBooking);
 
 module.exports = router;

@@ -30,15 +30,17 @@ function generateIcs(booking, room, company, attendeeEmails = []) {
   const dtStamp = formatIcsDate(new Date());
   const dtStart = formatIcsDate(booking.startTime);
   const dtEnd = formatIcsDate(booking.endTime);
-  const location = escapeIcsText(`${room.name}${room.floor ? ` (${room.floor})` : ''} - ${company.name}`);
-  const summary = escapeIcsText(booking.title);
+  const companyName = company?.name || room?.company?.name || 'MRA Group';
+  const roomFloor = room?.floor ? ` (${room.floor})` : '';
+  const location = escapeIcsText(`${room?.name || 'Meeting Room'}${roomFloor} - ${companyName}`);
+  const summary = escapeIcsText(booking.title || 'Meeting');
   
   const descriptionBody = [
     `Agenda / Description: ${booking.description || 'Internal MRA Corporate Meeting'}`,
-    `Room: ${room.name} (${company.name})`,
-    `Host / Organizer: ${booking.organizerName} (${booking.organizerEmail})`,
-    `Department: ${booking.department}`,
-    `Attendees Count: ${booking.attendeesCount} pax`,
+    `Room: ${room?.name || 'Meeting Room'} (${companyName})`,
+    `Host / Organizer: ${booking.organizerName || 'Organizer'} (${booking.organizerEmail || 'meeting@mra.co.id'})`,
+    `Department: ${booking.department || '-'}`,
+    `Attendees Count: ${booking.attendeesCount || 1} pax`,
     booking.specialRequests ? `Special Requests: ${booking.specialRequests}` : '',
     '',
     'Booked via MRA Group Meeting Room Booking Portal'
@@ -60,7 +62,7 @@ function generateIcs(booking, room, company, attendeeEmails = []) {
     `SUMMARY:${summary}`,
     `DESCRIPTION:${escapedDescription}`,
     `LOCATION:${location}`,
-    `ORGANIZER;CN="${booking.organizerName}":mailto:${booking.organizerEmail}`,
+    `ORGANIZER;CN="${booking.organizerName || 'Organizer'}":mailto:${booking.organizerEmail || 'meeting@mra.co.id'}`,
     'STATUS:CONFIRMED',
     'SEQUENCE:0',
     'TRANSP:OPAQUE'
