@@ -127,15 +127,15 @@ def main():
         time.sleep(5)
         run_ssh_command(client, f"cd {PROJECT_DIR} && docker compose ps")
         
-        print("\n--- Testing HTTP Response Port 80 (Nginx Proxy) ---")
-        run_ssh_command(client, "curl -I -s http://localhost/ | head -n 8")
+        print("\n--- Testing HTTP Response Port 8082 (Nginx Proxy) ---")
+        run_ssh_command(client, "curl -I -s http://localhost:8082/ | head -n 8")
         
-        print("\n--- Testing API Health Response ---")
-        run_ssh_command(client, "curl -s http://localhost/api/health")
+        print("\n--- Testing API Health Response Port 8082 ---")
+        run_ssh_command(client, "curl -s http://localhost:8082/api/health")
         
         print("\n===============================================================")
         print("🎉 DEPLOYMENT BERHASIL & SELESAI!")
-        print(f"🌐 Aplikasi kini aktif di : http://{SSH_HOST} dan http://meeting.mra.co.id")
+        print(f"🌐 Aplikasi kini aktif di : http://{SSH_HOST}:8082 dan http://meeting.mra.co.id:8082")
         print("===============================================================\n")
 
     finally:
