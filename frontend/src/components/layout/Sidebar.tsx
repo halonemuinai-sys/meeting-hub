@@ -4,7 +4,6 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays,
-  Building2,
   DoorOpen,
   PanelLeftClose,
   ShieldCheck,
@@ -97,8 +96,8 @@ export default function Sidebar({
           className="flex items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
           aria-label="Meeting Hub home"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/15 text-blue-300">
-            <Building2 className="h-5 w-5" />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm">
+            <img src="/mra_logo.png" alt="" className="max-h-full max-w-full object-contain" />
           </span>
           <span>
             <span className="block text-base font-bold tracking-tight text-white">MEETING HUB</span>

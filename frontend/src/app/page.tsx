@@ -297,8 +297,8 @@ export default function MeetingRoomBookingPage() {
           onOpenMobile={() => setMobileNavOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8 pb-16">
-          <div className="mx-auto max-w-[1600px] space-y-6">
+        <main className="flex flex-1 flex-col overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-[1600px] flex-1 space-y-6">
             {activeTab === 'calendar' && (
               <>
                 {/* Page Header */}
@@ -591,6 +591,13 @@ export default function MeetingRoomBookingPage() {
             {canAccessTab && activeTab === 'amenities' && <AmenitiesModule />}
             {canAccessTab && activeTab === 'attendees' && <AttendeesModule />}
           </div>
+
+          <footer className="mx-auto mt-10 flex w-full max-w-[1600px] flex-col gap-1 border-t border-slate-200 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>© {new Date().getFullYear()} MRA Group · Meeting Hub</span>
+            <span>
+              Developed by <span className="font-semibold text-slate-700">Aris Setiyono</span>
+            </span>
+          </footer>
         </main>
       </div>
 
