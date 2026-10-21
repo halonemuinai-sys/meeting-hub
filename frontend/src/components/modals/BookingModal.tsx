@@ -21,12 +21,15 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import DatePicker from '@/components/ui/DatePicker';
 import TimeSelect from '@/components/ui/TimeSelect';
+import type { MeetingEvent } from '@/components/calendar/calendarFormat';
 
 interface BookingModalProps {
   rooms: any[];
   defaultRoomId?: string;
   defaultDate?: Date;
   defaultHour?: number;
+  /** When set, the modal edits this meeting instead of creating a new one */
+  editingEvent?: MeetingEvent | null;
   onClose: () => void;
   onSuccess: (message: string) => void;
 }
@@ -89,19 +92,33 @@ function getInitialSchedule(defaultDate?: Date, defaultHour?: number) {
   return { date, start: fromMinutes(startMins), end: fromMinutes(startMins + 60) };
 }
 
+const toHourMinute = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
 export default function BookingModal({
   rooms,
   defaultRoomId,
   defaultDate,
   defaultHour,
+  editingEvent,
   onClose,
   onSuccess
 }: BookingModalProps) {
+  const isEdit = Boolean(editingEvent);
   const { user } = useAuth();
   // Employees always book under their own identity; admins may book on behalf of others
   const canChangeOrganizer = user?.role === 'SUPER_ADMIN' || user?.role === 'GA_ADMIN';
 
-  const initial = useMemo(() => getInitialSchedule(defaultDate, defaultHour), [defaultDate, defaultHour]);
+  const initial = useMemo(
+    () =>
+      editingEvent
+        ? { date: new Date(editingEvent.start), start: toHourMinute(editingEvent.start), end: toHourMinute(editingEvent.end) }
+        : getInitialSchedule(defaultDate, defaultHour),
+    [editingEvent, defaultDate, defaultHour]
+  );
+  const initialCategory = editingEvent?.category || CATEGORY_PRESETS[0];
 
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -109,24 +126,25 @@ export default function BookingModal({
   const [date, setDate] = useState<Date>(initial.date);
   const [start, setStart] = useState(initial.start);
   const [end, setEnd] = useState(initial.end);
-  const [roomId, setRoomId] = useState<string>(defaultRoomId || rooms[0]?.id || '');
+  const [roomId, setRoomId] = useState<string>(editingEvent?.roomId || defaultRoomId || rooms[0]?.id || '');
   const [busyRooms, setBusyRooms] = useState<Record<string, any>>({});
   const [checking, setChecking] = useState(false);
 
   // Step 2 — meeting details
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(CATEGORY_PRESETS[0]);
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
-  const [attendeesCount, setAttendeesCount] = useState(5);
-  const [attendees, setAttendees] = useState<string[]>([]);
-  const [specialRequests, setSpecialRequests] = useState('');
-  const [isConfidential, setIsConfidential] = useState(false);
-  const [organizer, setOrganizer] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    department: user?.department || ''
-  });
-  const [editOrganizer, setEditOrganizer] = useState(!user?.department);
+  const [title, setTitle] = useState(editingEvent?.title || '');
+  const [category, setCategory] = useState(initialCategory);
+  const [isCustomCategory, setIsCustomCategory] = useState(!CATEGORY_PRESETS.includes(initialCategory));
+  const [attendeesCount, setAttendeesCount] = useState(editingEvent?.attendeesCount || 5);
+  const [attendees, setAttendees] = useState<string[]>(editingEvent?.attendees || []);
+  const [specialRequests, setSpecialRequests] = useState(editingEvent?.specialRequests || '');
+  const [isConfidential, setIsConfidential] = useState(Boolean(editingEvent?.isConfidential));
+  const [organizer, setOrganizer] = useState(
+    editingEvent
+      ? { name: editingEvent.organizerName, email: editingEvent.organizerEmail, department: editingEvent.department }
+      : { name: user?.name || '', email: user?.email || '', department: user?.department || '' }
+  );
+  // The organizer of an existing meeting cannot be changed; only their department text
+  const [editOrganizer, setEditOrganizer] = useState(editingEvent ? !editingEvent.department : !user?.department);
 
   const [directory, setDirectory] = useState<any[]>([]);
   const [attendeeSearch, setAttendeeSearch] = useState('');
@@ -140,8 +158,10 @@ export default function BookingModal({
   const selectedRoom = rooms.find((r) => r.id === roomId);
   const selectedRoomBusy = roomId ? busyRooms[roomId] : null;
   const dateKey = toDateKey(date);
-  const startIso = `${dateKey}T${start}`;
-  const endIso = `${dateKey}T${end}`;
+  // Send absolute UTC timestamps: a bare "YYYY-MM-DDTHH:mm" would be read in the server's
+  // timezone (UTC in Docker), shifting WIB meetings by 7 hours.
+  const startIso = new Date(`${dateKey}T${start}`).toISOString();
+  const endIso = new Date(`${dateKey}T${end}`).toISOString();
   const isPast = new Date(startIso) < new Date();
   const isOverCapacity = selectedRoom && attendeesCount > selectedRoom.capacityMax;
   const scheduleValid = durationMins > 0 && !!roomId && !selectedRoomBusy && !isPast;
@@ -183,7 +203,7 @@ export default function BookingModal({
         const results = await Promise.all(
           rooms.map((r) =>
             api
-              .checkAvailability({ roomId: r.id, startTime: startIso, endTime: endIso })
+              .checkAvailability({ roomId: r.id, startTime: startIso, endTime: endIso, excludeBookingId: editingEvent?.id })
               .then((res) => [r.id, res.isAvailable ? null : res.conflicts?.[0] || {}] as const)
               .catch(() => [r.id, null] as const)
           )
@@ -199,7 +219,7 @@ export default function BookingModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [rooms, startIso, endIso, durationMins]);
+  }, [rooms, startIso, endIso, durationMins, editingEvent?.id]);
 
   const changeStart = (value: string) => {
     // Keep the current duration when moving the start time
@@ -260,9 +280,9 @@ export default function BookingModal({
 
     setSubmitting(true);
     try {
-      const res = await api.createBooking({
+      const payload = {
         title,
-        description: '',
+        description: editingEvent?.description || '',
         roomId,
         startTime: startIso,
         endTime: endIso,
@@ -274,7 +294,10 @@ export default function BookingModal({
         specialRequests,
         attendees: finalAttendees,
         attendeesCount: Math.max(finalAttendees.length + 1, attendeesCount)
-      });
+      };
+      const res = editingEvent
+        ? await api.updateBooking(editingEvent.id, payload)
+        : await api.createBooking(payload);
       onSuccess(res.message);
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to submit room reservation.');
@@ -307,7 +330,9 @@ export default function BookingModal({
         {/* Header */}
         <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
           <div>
-            <h2 id="booking-modal-title" className="text-base font-bold text-slate-900">Book a Meeting Room</h2>
+            <h2 id="booking-modal-title" className="text-base font-bold text-slate-900">
+              {isEdit ? 'Edit Meeting' : 'Book a Meeting Room'}
+            </h2>
             <ol className="mt-1.5 flex items-center gap-2 text-xs">
               {['Schedule & room', 'Meeting details'].map((label, i) => {
                 const n = (i + 1) as 1 | 2;
@@ -778,7 +803,7 @@ export default function BookingModal({
                   </label>
 
                   {/* Organizer */}
-                  {editOrganizer && canChangeOrganizer ? (
+                  {editOrganizer && canChangeOrganizer && !isEdit ? (
                     <div className="space-y-3 rounded-xl border border-slate-200 p-4">
                       <p className="text-xs font-semibold text-slate-700">Organizer</p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -830,7 +855,7 @@ export default function BookingModal({
                         Organizer: <span className="font-semibold text-slate-700">{organizer.name}</span>
                         {organizer.department ? ` · ${organizer.department}` : ''}
                       </span>
-                      {canChangeOrganizer && (
+                      {canChangeOrganizer && !isEdit && (
                         <button
                           type="button"
                           onClick={() => setEditOrganizer(true)}
@@ -890,11 +915,11 @@ export default function BookingModal({
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Booking…
+                      <Loader2 className="h-4 w-4 animate-spin" /> {isEdit ? 'Saving…' : 'Booking…'}
                     </>
                   ) : (
                     <>
-                      <Check className="h-4 w-4" /> Confirm booking
+                      <Check className="h-4 w-4" /> {isEdit ? 'Save changes' : 'Confirm booking'}
                     </>
                   )}
                 </button>

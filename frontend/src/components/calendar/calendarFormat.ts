@@ -23,6 +23,7 @@ export interface MeetingEvent {
   canViewConfidential?: boolean;
   isCreator?: boolean;
   canCancel?: boolean;
+  canEdit?: boolean;
   category?: string | null;
   createdAt?: string;
   conflict?: boolean;

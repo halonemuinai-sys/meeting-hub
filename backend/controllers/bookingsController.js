@@ -19,6 +19,62 @@ function canCancelBooking(user, booking) {
 }
 
 /**
+ * Only the organizer may edit a meeting, and only before it starts.
+ */
+function canEditBooking(user, booking) {
+  return booking.status !== 'CANCELLED' && new Date(booking.startTime) > new Date() && isOrganizer(user, booking);
+}
+
+/**
+ * Auto-persist newly typed attendee emails into the master Attendee directory
+ * so that Admin / GA can review and refine their company & department later
+ */
+function saveNewAttendeesToDirectory(attendeesJson) {
+  try {
+    const attendeeEmails = attendeesJson ? JSON.parse(attendeesJson) : [];
+    if (!Array.isArray(attendeeEmails) || attendeeEmails.length === 0) return;
+    prisma.company.findMany().then(async (companies) => {
+      for (const em of attendeeEmails) {
+        const exists = await prisma.attendee.findUnique({ where: { email: em } });
+        if (!exists) {
+          const inf = inferNameAndEntityFromEmail(em, companies);
+          await prisma.attendee.create({
+            data: {
+              fullName: inf.fullName,
+              email: inf.email,
+              companyId: inf.companyId,
+              department: inf.department,
+              jobTitle: inf.jobTitle,
+              phone: null
+            }
+          }).catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  } catch (e) {
+    // Non-blocking
+  }
+}
+
+function clashResponse(res, conflicts) {
+  const clash = conflicts[0];
+  const clashStart = new Date(clash.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const clashEnd = new Date(clash.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return res.status(409).json({
+    success: false,
+    isConflict: true,
+    message: `Schedule clash detected with "${clash.title}" (${clashStart} - ${clashEnd} WIB by ${clash.organizerName}). Please select another time or room.`,
+    conflicts: conflicts.map(c => ({
+      id: c.id,
+      title: c.title,
+      organizerName: c.organizerName,
+      startTime: c.startTime,
+      endTime: c.endTime
+    }))
+  });
+}
+
+/**
  * Get bookings for calendar views (with date range & filters)
  */
 async function getBookings(req, res) {
@@ -94,6 +150,7 @@ async function getBookings(req, res) {
       return {
         id: b.id,
         canCancel: b.status !== 'CANCELLED' && canCancelBooking(currentUser, b),
+        canEdit: canEditBooking(currentUser, b),
         title: canViewConfidential ? b.title : 'Private Meeting',
         description: canViewConfidential ? b.description : 'Details are visible only to the organizer.',
         start: b.startTime.toISOString(),
@@ -225,21 +282,7 @@ async function createBooking(req, res) {
     );
 
     if (hasConflict) {
-      const clash = conflicts[0];
-      const clashStart = new Date(clash.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const clashEnd = new Date(clash.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      return res.status(409).json({
-        success: false,
-        isConflict: true,
-        message: `Schedule clash detected with "${clash.title}" (${clashStart} - ${clashEnd} WIB by ${clash.organizerName}). Please select another time or room.`,
-        conflicts: conflicts.map(c => ({
-          id: c.id,
-          title: c.title,
-          organizerName: c.organizerName,
-          startTime: c.startTime,
-          endTime: c.endTime
-        }))
-      });
+      return clashResponse(res, conflicts);
     }
 
     const calendarUid = `mra-meet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@mra.co.id`;
@@ -262,33 +305,7 @@ async function createBooking(req, res) {
       console.error('Async mail error:', err);
     });
 
-    // Auto-persist any newly typed attendee emails into the master Attendee directory
-    // so that Admin / GA can review and refine their company & department later
-    try {
-      const attendeeEmails = bookingData.attendees ? JSON.parse(bookingData.attendees) : [];
-      if (Array.isArray(attendeeEmails) && attendeeEmails.length > 0) {
-        prisma.company.findMany().then(async (companies) => {
-          for (const em of attendeeEmails) {
-            const exists = await prisma.attendee.findUnique({ where: { email: em } });
-            if (!exists) {
-              const inf = inferNameAndEntityFromEmail(em, companies);
-              await prisma.attendee.create({
-                data: {
-                  fullName: inf.fullName,
-                  email: inf.email,
-                  companyId: inf.companyId,
-                  department: inf.department,
-                  jobTitle: inf.jobTitle,
-                  phone: null
-                }
-              }).catch(() => {});
-            }
-          }
-        }).catch(() => {});
-      }
-    } catch (e) {
-      // Non-blocking
-    }
+    saveNewAttendeesToDirectory(bookingData.attendees);
 
     return res.status(201).json({
       success: true,
@@ -299,6 +316,118 @@ async function createBooking(req, res) {
   } catch (error) {
     console.error('createBooking error:', error);
     return res.status(500).json({ success: false, message: 'Failed to create room booking.' });
+  }
+}
+
+/**
+ * Edit an existing booking (organizer only, before the meeting starts)
+ */
+async function updateBooking(req, res) {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.booking.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Reservation not found.' });
+    }
+    if (existing.status === 'CANCELLED') {
+      return res.status(400).json({ success: false, message: 'Cancelled reservations cannot be edited.' });
+    }
+    if (!isOrganizer(req.user, existing)) {
+      return res.status(403).json({ success: false, message: 'Only the meeting organizer can edit this reservation.' });
+    }
+    if (new Date(existing.startTime) <= new Date()) {
+      return res.status(400).json({ success: false, message: 'Meetings that have already started cannot be edited.' });
+    }
+
+    // The organizer identity stays with the original booking
+    const input = {
+      ...req.body,
+      organizerName: existing.organizerName,
+      organizerEmail: existing.organizerEmail,
+      department: req.body.department || existing.department
+    };
+
+    const validation = validateBookingInput(input);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: validation.errors[0],
+        errors: validation.errors
+      });
+    }
+
+    const bookingData = validation.data;
+
+    if (bookingData.startTime <= new Date()) {
+      return res.status(400).json({ success: false, message: 'The new meeting time must be in the future.' });
+    }
+
+    const room = await prisma.room.findUnique({
+      where: { id: bookingData.roomId },
+      include: { company: true }
+    });
+
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Meeting room not found.' });
+    }
+    if (!room.isActive) {
+      return res.status(400).json({ success: false, message: 'This meeting room is currently inactive.' });
+    }
+
+    const scheduleChanged =
+      bookingData.roomId !== existing.roomId ||
+      bookingData.startTime.getTime() !== existing.startTime.getTime() ||
+      bookingData.endTime.getTime() !== existing.endTime.getTime();
+
+    if (scheduleChanged && room.isMaintenance) {
+      return res.status(400).json({
+        success: false,
+        message: `This meeting room is currently under maintenance (${room.maintenanceNote || 'Maintenance'}).`
+      });
+    }
+
+    let capacityWarning = null;
+    if (bookingData.attendeesCount > room.capacityMax) {
+      capacityWarning = `Attendee count (${bookingData.attendeesCount} pax) exceeds maximum room capacity (${room.capacityMax} seats).`;
+    }
+
+    // STRICT ANTI-COLLISION CHECK (ignoring this booking itself)
+    const { hasConflict, conflicts } = await checkRoomConflict(
+      bookingData.roomId,
+      bookingData.startTime,
+      bookingData.endTime,
+      id
+    );
+    if (hasConflict) {
+      return clashResponse(res, conflicts);
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: bookingData,
+      include: {
+        room: {
+          include: { company: true }
+        }
+      }
+    });
+
+    sendBookingConfirmation(updated, room, room.company, { isUpdate: true }).catch(err => {
+      console.error('Async update mail error:', err);
+    });
+
+    saveNewAttendeesToDirectory(bookingData.attendees);
+
+    return res.json({
+      success: true,
+      message: 'Reservation updated and calendar invitations re-sent.',
+      warning: capacityWarning,
+      data: updated
+    });
+  } catch (error) {
+    console.error('updateBooking error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update reservation.' });
   }
 }
 
@@ -368,5 +497,6 @@ module.exports = {
   getBookings,
   checkAvailability,
   createBooking,
+  updateBooking,
   cancelBooking
 };

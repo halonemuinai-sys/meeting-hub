@@ -77,6 +77,12 @@ export const api = {
       body: JSON.stringify(payload)
     }),
 
+  updateBooking: (id: string, payload: any) =>
+    fetcher<{ success: boolean; message: string; warning?: string; data: any }>(`/bookings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }),
+
   cancelBooking: (id: string, reason?: string) =>
     fetcher<{ success: boolean; message: string; data: any }>(`/bookings/${id}/cancel`, {
       method: 'POST',

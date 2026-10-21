@@ -7,6 +7,7 @@ const { optionalAuth, requireAuth } = require('../middleware/auth');
 router.get('/', optionalAuth, bookingsController.getBookings);
 router.post('/check-availability', bookingsController.checkAvailability);
 router.post('/', requireAuth, bookingsController.createBooking);
+router.put('/:id', requireAuth, bookingsController.updateBooking);
 router.post('/:id/cancel', requireAuth, bookingsController.cancelBooking);
 router.put('/:id/cancel', requireAuth, bookingsController.cancelBooking);
 

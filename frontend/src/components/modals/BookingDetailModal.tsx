@@ -9,6 +9,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  Pencil,
   StickyNote,
   Trash2,
   User,
@@ -22,6 +23,8 @@ interface BookingDetailModalProps {
   event: MeetingEvent;
   onClose: () => void;
   onCancelled: (message: string) => void;
+  /** Shown only when the API marks the meeting editable (organizer, not started yet) */
+  onEdit?: (event: MeetingEvent) => void;
 }
 
 function durationLabel(e: MeetingEvent) {
@@ -46,7 +49,7 @@ function DetailRow({ icon: Icon, children }: { icon: React.ElementType; children
   );
 }
 
-export default function BookingDetailModal({ event: e, onClose, onCancelled }: BookingDetailModalProps) {
+export default function BookingDetailModal({ event: e, onClose, onCancelled, onEdit }: BookingDetailModalProps) {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [reason, setReason] = useState('');
@@ -312,6 +315,16 @@ export default function BookingDetailModal({ event: e, onClose, onCancelled }: B
                 className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
               >
                 Cancel booking
+              </button>
+            )}
+            {!isCancelled && !showCancelConfirm && e.canEdit && onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(e)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit booking
               </button>
             )}
             <button

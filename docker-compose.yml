@@ -11,6 +11,7 @@ services:
     environment:
       - PORT=5007
       - NODE_ENV=production
+      - TZ=Asia/Jakarta
 
   frontend:
     build:
@@ -24,6 +25,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - TZ=Asia/Jakarta
     depends_on:
       - backend
 

@@ -42,7 +42,7 @@ function formatEnglishDate(date) {
 /**
  * Send Booking Confirmation Email with .ics Calendar Invite
  */
-async function sendBookingConfirmation(booking, room, company) {
+async function sendBookingConfirmation(booking, room, company, { isUpdate = false } = {}) {
   try {
     let rawAttendees = [];
     if (Array.isArray(booking.attendees)) {
@@ -64,7 +64,11 @@ async function sendBookingConfirmation(booking, room, company) {
     }
 
     const companyObj = company || room?.company || { name: 'MRA Group' };
-    const icsContent = generateIcs(booking, room, companyObj, recipientEmails);
+    // Updates reuse the same calendar UID; a higher SEQUENCE (seconds since epoch, always increasing)
+    // makes Outlook / Google Calendar replace the existing event instead of adding a duplicate.
+    const icsContent = generateIcs(booking, room, companyObj, recipientEmails, {
+      sequence: isUpdate ? Math.floor(Date.now() / 1000) : 0
+    });
     const dateFormatted = `${formatEnglishDate(booking.startTime)} - ${new Date(booking.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })} WIB`;
 
     const htmlContent = `
@@ -91,8 +95,8 @@ async function sendBookingConfirmation(booking, room, company) {
       <div class="card">
         <div class="header">
           <p>MRA GROUP · MEETING ROOM BOOKING</p>
-          <h1>Meeting Room Reservation Confirmation</h1>
-          <p>Your room booking has been successfully confirmed.</p>
+          <h1>${isUpdate ? 'Meeting Room Reservation Updated' : 'Meeting Room Reservation Confirmation'}</h1>
+          <p>${isUpdate ? 'The organizer has updated this meeting. The details below replace the previous invitation.' : 'Your room booking has been successfully confirmed.'}</p>
         </div>
         <div class="content">
           <div class="field">
@@ -138,7 +142,9 @@ async function sendBookingConfirmation(booking, room, company) {
     const mailOptions = {
       from: `"${process.env.MAIL_FROM_NAME || 'MRA Meeting Booking'}" <${process.env.SMTP_FROM || 'meeting@mra.co.id'}>`,
       to: recipientEmails.join(', '),
-      subject: `[CONFIRMED] Meeting Room Booking: ${booking.title} (${room.name})`,
+      subject: isUpdate
+        ? `[UPDATED] Meeting Room Booking: ${booking.title} (${room.name})`
+        : `[CONFIRMED] Meeting Room Booking: ${booking.title} (${room.name})`,
       html: htmlContent,
       icalEvent: {
         filename: 'invite.ics',

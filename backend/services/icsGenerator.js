@@ -23,9 +23,10 @@ function escapeIcsText(str) {
  * @param {object} room
  * @param {object} company
  * @param {string[]} attendeeEmails
+ * @param {{ sequence?: number }} options  sequence must increase on every update of the same UID
  * @returns {string} ics content
  */
-function generateIcs(booking, room, company, attendeeEmails = []) {
+function generateIcs(booking, room, company, attendeeEmails = [], { sequence = 0 } = {}) {
   const uid = booking.calendarUid || `mra-booking-${booking.id}@mra.co.id`;
   const dtStamp = formatIcsDate(new Date());
   const dtStart = formatIcsDate(booking.startTime);
@@ -64,7 +65,7 @@ function generateIcs(booking, room, company, attendeeEmails = []) {
     `LOCATION:${location}`,
     `ORGANIZER;CN="${booking.organizerName || 'Organizer'}":mailto:${booking.organizerEmail || 'meeting@mra.co.id'}`,
     'STATUS:CONFIRMED',
-    'SEQUENCE:0',
+    `SEQUENCE:${sequence}`,
     'TRANSP:OPAQUE'
   ];
 

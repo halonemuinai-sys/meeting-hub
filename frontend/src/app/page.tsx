@@ -106,6 +106,7 @@ export default function MeetingRoomBookingPage() {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ room?: any; hour?: number; date?: Date } | null>(null);
   const [activeDetailEvent, setActiveDetailEvent] = useState<MeetingEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<MeetingEvent | null>(null);
 
   const [toast, setToast] = useState<{ id: number; tone: 'success' | 'error'; message: string } | null>(null);
 
@@ -608,9 +609,14 @@ export default function MeetingRoomBookingPage() {
             defaultRoomId={selectedSlot?.room?.id || roomId}
             defaultDate={selectedSlot?.date || anchor}
             defaultHour={selectedSlot?.hour}
-            onClose={() => setBookingModalOpen(false)}
+            editingEvent={editingEvent}
+            onClose={() => {
+              setBookingModalOpen(false);
+              setEditingEvent(null);
+            }}
             onSuccess={(msg) => {
               setBookingModalOpen(false);
+              setEditingEvent(null);
               showToast(msg);
               loadBookings();
             }}
@@ -621,6 +627,11 @@ export default function MeetingRoomBookingPage() {
           <BookingDetailModal
             event={activeDetailEvent}
             onClose={() => setActiveDetailEvent(null)}
+            onEdit={(ev) => {
+              setActiveDetailEvent(null);
+              setEditingEvent(ev);
+              setBookingModalOpen(true);
+            }}
             onCancelled={(msg) => {
               setActiveDetailEvent(null);
               showToast(msg);
