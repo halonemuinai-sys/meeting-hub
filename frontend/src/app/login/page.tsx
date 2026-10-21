@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, MotionConfig } from 'framer-motion';
 import {
   Mail,
   Lock,
@@ -65,17 +65,18 @@ export default function LoginPage() {
   };
 
   const inputCls =
-    'w-full pl-11 pr-11 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 text-sm ' +
+    'w-full pl-11 pr-11 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-900 text-sm ' +
     'placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ' +
-    'focus:border-blue-500 transition-all font-medium';
+    'focus:border-blue-500 focus:bg-white hover:border-slate-300 transition-colors duration-200 disabled:opacity-60';
 
   return (
-    <div className="min-h-screen w-full flex bg-white font-sans h-screen overflow-hidden">
+    <MotionConfig reducedMotion="user">
+    <div className="min-h-dvh w-full flex bg-white font-sans">
       {/* Decorative Left Graphic Panel (HR HUB / GLC Pattern) */}
       <AuthSidePanel />
 
       {/* Right Login Form Panel */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 md:p-16 bg-white overflow-y-auto h-full">
+      <div className="flex-1 flex min-w-0 flex-col items-center justify-center px-6 py-10 sm:px-12 lg:px-10 xl:px-16">
         <div className="w-full max-w-md">
           {/* Mobile Top Header (Visible on smaller screens) */}
           <div className="lg:hidden flex items-center justify-between mb-8">
@@ -97,17 +98,17 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-7">
             {/* Title & Subtitle */}
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shadow-xs flex-shrink-0 p-2">
                 <img src="/mra_logo.png" alt="MRA Group Logo" className="max-w-full max-h-full object-contain" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight leading-tight">
                   Sign in to MRA Portal
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-sm leading-relaxed text-slate-500 mt-2">
                   Access room reservations, amenities management, and corporate directory.
                 </p>
               </div>
@@ -115,7 +116,7 @@ export default function LoginPage() {
 
             {/* Success Message Alert (e.g. after password reset) */}
             {successMsg && (
-              <motion.div
+              <motion.div role="status"
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold"
@@ -127,7 +128,7 @@ export default function LoginPage() {
 
             {/* Error Message Alert */}
             {apiError && (
-              <motion.div
+              <motion.div role="alert"
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold"
@@ -138,13 +139,16 @@ export default function LoginPage() {
             )}
 
             {/* Credentials Login Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email Address */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Work Email Address</label>
+                <label htmlFor="login-email" className="block text-xs font-semibold text-slate-700">Work Email Address</label>
                 <div className="relative group">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none" />
                   <input
+                    id="login-email"
+                    name="email"
+                    autoComplete="username"
                     type="email"
                     value={email}
                     onChange={(e) => {
@@ -163,7 +167,7 @@ export default function LoginPage() {
               {/* Password */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">Password</label>
+                  <label htmlFor="login-password" className="text-xs font-semibold text-slate-700">Password</label>
                   <Link
                     href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
@@ -174,6 +178,9 @@ export default function LoginPage() {
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none" />
                   <input
+                    id="login-password"
+                    name="password"
+                    autoComplete="current-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -185,7 +192,10 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    disabled={isLoading}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-blue-600 transition-colors cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -196,9 +206,9 @@ export default function LoginPage() {
               <motion.button
                 type="submit"
                 disabled={isLoading}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="relative w-full overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition-all shadow-lg shadow-blue-500/25 cursor-pointer mt-2"
+                whileHover={isLoading ? undefined : { y: -1 }}
+                whileTap={isLoading ? undefined : { scale: 0.99 }}
+                className="relative w-full overflow-hidden flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait transition-colors duration-200 shadow-sm shadow-blue-500/20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 cursor-pointer mt-2"
               >
                 {isLoading ? (
                   <>
@@ -215,8 +225,8 @@ export default function LoginPage() {
             </form>
 
             {/* Corporate Security Footer Note */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
+            <div className="pt-5 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
                 <Shield className="h-3.5 w-3.5 text-slate-400" />
                 <span>Authorized MRA Group personnel only</span>
               </div>
@@ -236,5 +246,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </MotionConfig>
   );
 }
