@@ -112,9 +112,36 @@ async function deleteAmenity(req, res) {
   }
 }
 
+async function deleteAllAmenities(req, res) {
+  try {
+    const clearRooms = req.query.clearRooms === 'true' || req.body?.clearRooms === true;
+
+    const result = await prisma.amenity.deleteMany({});
+
+    let roomsUpdated = 0;
+    if (clearRooms) {
+      const roomRes = await prisma.room.updateMany({
+        data: { amenities: '[]' }
+      });
+      roomsUpdated = roomRes.count;
+    }
+
+    res.json({
+      success: true,
+      message: `Semua fasilitas (${result.count} item) berhasil dihapus.${roomsUpdated > 0 ? ` Fasilitas di ${roomsUpdated} ruangan juga telah dibersihkan.` : ''}`,
+      count: result.count,
+      roomsUpdated
+    });
+  } catch (err) {
+    console.error('deleteAllAmenities error:', err);
+    res.status(500).json({ success: false, message: 'Gagal menghapus semua fasilitas.' });
+  }
+}
+
 module.exports = {
   getAmenities,
   createAmenity,
   updateAmenity,
-  deleteAmenity
+  deleteAmenity,
+  deleteAllAmenities
 };

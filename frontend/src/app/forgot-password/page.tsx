@@ -14,19 +14,11 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  KeyRound,
   ShieldCheck,
-  Sparkles,
-  Calendar
+  Shield
 } from 'lucide-react';
 import AuthSidePanel from '@/components/auth/AuthSidePanel';
 import { api } from '@/lib/api';
-
-const QUICK_ACCOUNTS = [
-  { role: 'Super Admin', name: 'Aris Setiyono', email: 'admin@mra.co.id' },
-  { role: 'GA Holding', name: 'Bambang Sudibyo', email: 'ga.holding@mra.co.id' },
-  { role: 'Employee', name: 'Dina Lestari', email: 'user@mra.co.id' }
-];
 
 function ForgotPasswordContent() {
   const router = useRouter();
@@ -43,7 +35,6 @@ function ForgotPasswordContent() {
   const [token, setToken] = useState('');
 
   // UI feedback states
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
@@ -82,9 +73,6 @@ function ForgotPasswordContent() {
       const res = await api.forgotPassword(email.trim().toLowerCase());
       if (res.success) {
         setSuccessNotice(res.message);
-        if (res.devOtp) {
-          setDevOtp(res.devOtp);
-        }
         if (res.resetToken) {
           setToken(res.resetToken);
         }
@@ -120,32 +108,21 @@ function ForgotPasswordContent() {
     }
 
     setIsLoading(true);
-
     try {
       const res = await api.resetPassword({
         email: email.trim().toLowerCase(),
         code: code.trim(),
         newPassword,
-        token: token || undefined
+        token
       });
 
       if (res.success) {
         setStep(3);
-        // Start auto-redirect countdown
-        let count = 5;
-        const timer = setInterval(() => {
-          count -= 1;
-          setCountdown(count);
-          if (count <= 0) {
-            clearInterval(timer);
-            router.push(`/login?email=${encodeURIComponent(email)}&reset=success`);
-          }
-        }, 1000);
       } else {
-        setApiError(res.message || 'Failed to reset password.');
+        setApiError(res.message || 'Failed to reset password. Please check your verification code.');
       }
     } catch (err: any) {
-      setApiError(err.message || 'Failed to update password. Please check your verification code.');
+      setApiError(err.message || 'Failed to reset password.');
     } finally {
       setIsLoading(false);
     }
@@ -153,19 +130,16 @@ function ForgotPasswordContent() {
 
   // Resend code handler
   const handleResendCode = async () => {
+    if (!email.trim() || isLoading) return;
     setIsLoading(true);
     setApiError(null);
     try {
       const res = await api.forgotPassword(email.trim().toLowerCase());
       if (res.success) {
-        setSuccessNotice('New verification code sent to your email.');
-        if (res.devOtp) {
-          setDevOtp(res.devOtp);
-          setCode(res.devOtp);
-        }
-        if (res.resetToken) {
-          setToken(res.resetToken);
-        }
+        setSuccessNotice('A new verification code has been dispatched to your email.');
+        if (res.resetToken) setToken(res.resetToken);
+      } else {
+        setApiError(res.message || 'Failed to resend code.');
       }
     } catch (err: any) {
       setApiError(err.message || 'Failed to resend code.');
@@ -174,6 +148,23 @@ function ForgotPasswordContent() {
     }
   };
 
+  // Countdown timer for automatic redirection upon success
+  useEffect(() => {
+    if (step !== 3) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          router.push(`/login?email=${encodeURIComponent(email)}&reset=success`);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [step, email, router]);
+
   const inputCls =
     'w-full pl-11 pr-11 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-900 text-sm ' +
     'placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ' +
@@ -181,13 +172,13 @@ function ForgotPasswordContent() {
 
   return (
     <div className="min-h-screen w-full flex bg-white font-sans h-screen overflow-hidden">
-      {/* Decorative Left Graphic Panel (Consistent MRA Theme) */}
+      {/* Decorative Left Graphic Panel (HR HUB / GLC Pattern) */}
       <AuthSidePanel />
 
       {/* Right Content Panel */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 md:p-16 bg-white overflow-y-auto h-full">
         <div className="w-full max-w-md">
-          {/* Mobile Header */}
+          {/* Mobile Top Header */}
           <div className="lg:hidden flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-white border border-blue-100 flex items-center justify-center shadow-xs p-1.5">
@@ -195,7 +186,7 @@ function ForgotPasswordContent() {
               </div>
               <div>
                 <span className="text-sm font-bold text-slate-900 block">MRA Meeting Room</span>
-                <span className="text-[10px] text-slate-500">Corporate Booking Portal</span>
+                <span className="text-[10px] text-slate-500">Corporate Password Recovery</span>
               </div>
             </div>
             <Link
@@ -210,18 +201,18 @@ function ForgotPasswordContent() {
           <div className="space-y-6">
             {/* Header Icon & Title */}
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shadow-xs flex-shrink-0 text-blue-600">
-                <KeyRound className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shadow-xs flex-shrink-0 p-2">
+                <img src="/mra_logo.png" alt="MRA Group Logo" className="max-w-full max-h-full object-contain" />
               </div>
               <div>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                  {step === 1 && 'Reset Your Password'}
-                  {step === 2 && 'Verify & Set Password'}
-                  {step === 3 && 'Password Reset Complete'}
+                  {step === 1 && 'Reset your password'}
+                  {step === 2 && 'Enter verification code'}
+                  {step === 3 && 'Password updated'}
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  {step === 1 && 'Enter your work email address to receive a 6-digit recovery code.'}
-                  {step === 2 && `Enter the verification code sent to ${email} and choose a new password.`}
+                  {step === 1 && 'Enter your verified work email address to receive an official recovery code.'}
+                  {step === 2 && `We sent a 6-digit code to ${email}. Check your inbox or spam folder.`}
                   {step === 3 && 'Your credentials have been securely updated.'}
                 </p>
               </div>
@@ -262,7 +253,7 @@ function ForgotPasswordContent() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. aris@mra.co.id"
+                      placeholder="e.g. name@mra.co.id"
                       required
                       className={inputCls}
                       disabled={isLoading}
@@ -289,54 +280,12 @@ function ForgotPasswordContent() {
                     </>
                   )}
                 </motion.button>
-
-                {/* Quick Autofill for Registered Users */}
-                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 mt-6">
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <span className="text-xs font-bold text-slate-800">Quick Test Accounts</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {QUICK_ACCOUNTS.map((acc) => (
-                      <button
-                        key={acc.email}
-                        type="button"
-                        onClick={() => setEmail(acc.email)}
-                        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-left hover:border-blue-400 transition cursor-pointer"
-                      >
-                        <span className="text-xs font-bold text-slate-800">{acc.name}</span>
-                        <span className="text-[11px] text-slate-500 font-mono">{acc.email}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </form>
             )}
 
             {/* STEP 2: Verify Code & Set New Password */}
             {step === 2 && (
               <form onSubmit={handleResetPassword} className="space-y-4">
-                {/* Dev OTP Helper Banner for Smooth Testing */}
-                {devOtp && (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold flex items-center gap-1 text-amber-800">
-                        <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-                        Testing Mode Code Available
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-amber-700">
-                        Verification OTP: <strong className="font-mono text-sm tracking-widest text-amber-900">{devOtp}</strong>
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCode(devOtp)}
-                      className="rounded-lg bg-amber-200/80 hover:bg-amber-300 px-2.5 py-1 text-[11px] font-bold text-amber-900 transition"
-                    >
-                      Autofill Code
-                    </button>
-                  </div>
-                )}
-
                 {/* Verification Code */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -461,9 +410,17 @@ function ForgotPasswordContent() {
               </div>
             )}
 
+            {/* Security Note */}
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
+                <Shield className="h-3.5 w-3.5 text-slate-400" />
+                <span>Protected by MRA Enterprise Security</span>
+              </div>
+            </div>
+
             {/* Bottom Back to Sign In Link */}
             {step !== 3 && (
-              <div className="text-center pt-2">
+              <div className="text-center pt-1">
                 <Link
                   href="/login"
                   className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition inline-flex items-center gap-1.5"

@@ -14,37 +14,10 @@ import {
   CheckCircle2,
   Loader2,
   Calendar,
-  UserCheck
+  Shield
 } from 'lucide-react';
 import AuthSidePanel from '@/components/auth/AuthSidePanel';
 import { useAuth } from '@/context/AuthContext';
-
-const QUICK_ACCOUNTS = [
-  {
-    role: 'Super Admin',
-    name: 'Aris Setiyono',
-    email: 'admin@mra.co.id',
-    badge: 'bg-blue-100 text-blue-700 border-blue-200'
-  },
-  {
-    role: 'GA Holding',
-    name: 'Bambang Sudibyo',
-    email: 'ga.holding@mra.co.id',
-    badge: 'bg-emerald-100 text-emerald-700 border-emerald-200'
-  },
-  {
-    role: 'GA Mogems',
-    name: 'Staff GA Mogems',
-    email: 'ga.mogems@mogems.co.id',
-    badge: 'bg-amber-100 text-amber-700 border-amber-200'
-  },
-  {
-    role: 'Employee User',
-    name: 'Dina Lestari',
-    email: 'user@mra.co.id',
-    badge: 'bg-purple-100 text-purple-700 border-purple-200'
-  }
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -89,12 +62,6 @@ export default function LoginPage() {
       setApiError(res.message || 'Login failed. Please check your email and password.');
       setIsLoading(false);
     }
-  };
-
-  const handleQuickLogin = (accEmail: string) => {
-    setEmail(accEmail);
-    setPassword('Admin@123');
-    setApiError(null);
   };
 
   const inputCls =
@@ -185,7 +152,7 @@ export default function LoginPage() {
                       setApiError(null);
                       setSuccessMsg(null);
                     }}
-                    placeholder="e.g. aris@mra.co.id"
+                    placeholder="e.g. name@mra.co.id"
                     required
                     className={inputCls}
                     disabled={isLoading}
@@ -247,34 +214,16 @@ export default function LoginPage() {
               </motion.button>
             </form>
 
-            {/* Quick One-Click Demo Role Switcher */}
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
-              <div className="flex items-center gap-1.5 mb-2.5">
-                <span className="text-xs font-bold text-slate-800">Quick Demo Accounts (Click to Fill)</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {QUICK_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => handleQuickLogin(acc.email)}
-                    className="flex flex-col text-left rounded-xl border border-slate-200 bg-white p-2.5 hover:border-blue-400 hover:shadow-xs transition group cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${acc.badge}`}>
-                        {acc.role}
-                      </span>
-                      <UserCheck className="h-3 w-3 text-slate-400 group-hover:text-blue-600" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-900 mt-1 truncate">{acc.name}</span>
-                    <span className="text-[10px] text-slate-400 truncate">{acc.email}</span>
-                  </button>
-                ))}
+            {/* Corporate Security Footer Note */}
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
+                <Shield className="h-3.5 w-3.5 text-slate-400" />
+                <span>Authorized MRA Group personnel only</span>
               </div>
             </div>
 
             {/* Back to Public Calendar Link */}
-            <div className="text-center pt-2">
+            <div className="text-center pt-1">
               <Link
                 href="/"
                 className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition inline-flex items-center gap-1.5"

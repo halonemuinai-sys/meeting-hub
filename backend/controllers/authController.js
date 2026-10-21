@@ -236,8 +236,6 @@ async function forgotPassword(req, res) {
     return res.json({
       success: true,
       message: `A 6-digit verification code has been sent to ${normalizedEmail}.`,
-      // For frictionless demo / local testing without SMTP:
-      devOtp: otpCode,
       resetToken
     });
   } catch (error) {

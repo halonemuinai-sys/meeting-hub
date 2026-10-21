@@ -23,7 +23,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   requestLogout: () => void;
-  switchUser: (email: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,14 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logout();
   };
 
-  // Quick switch user for demo & testing convenience
-  const switchUser = async (email: string) => {
-    const res = await login(email, 'Admin@123');
-    return res.success;
-  };
-
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, requestLogout, switchUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, requestLogout }}>
       {children}
       <LogoutModal
         isOpen={isLogoutModalOpen}

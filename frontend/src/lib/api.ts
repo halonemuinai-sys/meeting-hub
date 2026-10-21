@@ -110,6 +110,13 @@ export const api = {
       body: JSON.stringify(payload)
     }),
 
+  deleteAllAmenities: (params?: { clearRooms?: boolean }) => {
+    const qs = params?.clearRooms ? '?clearRooms=true' : '';
+    return fetcher<{ success: boolean; message: string; count?: number; roomsUpdated?: number }>(`/amenities${qs}`, {
+      method: 'DELETE'
+    });
+  },
+
   deleteAmenity: (id: string) =>
     fetcher<{ success: boolean; message: string }>(`/amenities/${id}`, {
       method: 'DELETE'
